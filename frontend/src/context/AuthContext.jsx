@@ -1,21 +1,36 @@
+
 import { createContext, useState, useContext } from 'react';
 
 const AuthContext = createContext();
-const API_BASE_URL = import.meta.env.VITE_API_URL
-  || `${window.location.protocol}//${window.location.hostname}:8000`;
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  `${window.location.protocol}//${window.location.hostname}:8000`;
+
 const LOGIN_REQUEST_TIMEOUT = 10000;
 
 const fetchWithTimeout = (url, options) => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), LOGIN_REQUEST_TIMEOUT);
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    LOGIN_REQUEST_TIMEOUT
+  );
 
-  return fetch(url, { ...options, signal: controller.signal })
-    .finally(() => clearTimeout(timeoutId));
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId)
+  );
 };
 
 export const AuthProvider = ({ children }) => {
-  const storedToken = localStorage.getItem('access_token') || localStorage.getItem('token');
-  const storedUser = localStorage.getItem('user');
+  const storedToken =
+    localStorage.getItem('access_token') ||
+    sessionStorage.getItem('access_token') ||
+    localStorage.getItem('token') ||
+    sessionStorage.getItem('token');
+
+  const storedUser =
+    localStorage.getItem('user') || sessionStorage.getItem('user');
+
   const [user, setUser] = useState(() => {
     try {
       return storedUser ? JSON.parse(storedUser) : null;
@@ -23,7 +38,11 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
   });
-  const [isAuthenticated, setIsAuthenticated] = useState(Boolean(storedUser && storedToken));
+
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    Boolean(storedUser && storedToken)
+  );
+
   const [token, setToken] = useState(storedToken || null);
   const [authReady, setAuthReady] = useState(true);
 
@@ -33,45 +52,67 @@ export const AuthProvider = ({ children }) => {
     return 'talent_admin';
   };
 
-  const login = async (username, password) => {
+  const login = async (username, password, rememberMe = false) => {
     try {
       console.log('Attempting login with username:', username);
-      const tokenStartedAt = performance.now();
-      
-      const tokenResponse = await fetchWithTimeout(`${API_BASE_URL}/api/token/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
 
-      console.log('Token response status:', tokenResponse.status, `(${Math.round(performance.now() - tokenStartedAt)} ms)`);
+      const tokenStartedAt = performance.now();
+
+      const tokenResponse = await fetchWithTimeout(
+        `${API_BASE_URL}/api/token/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username,
+            password,
+          }),
+        }
+      );
+
+      console.log(
+        'Token response status:',
+        tokenResponse.status,
+        `(${Math.round(performance.now() - tokenStartedAt)} ms)`
+      );
 
       if (!tokenResponse.ok) {
         const errorData = await tokenResponse.json().catch(() => ({}));
-        const errorMsg = errorData.detail || errorData.non_field_errors?.[0] || 'Invalid username or password';
+
+        const errorMsg =
+          errorData.detail ||
+          errorData.non_field_errors?.[0] ||
+          'Invalid username or password';
+
         throw new Error(errorMsg);
       }
 
       const tokenData = await tokenResponse.json();
+
       const accessToken = tokenData.access;
       const refreshToken = tokenData.refresh;
+
       console.log('Token received successfully');
 
-      localStorage.setItem('access_token', accessToken);
-      if (refreshToken) {
-        localStorage.setItem('refresh_token', refreshToken);
-      }
-      localStorage.setItem('token', accessToken);
-
       const profileStartedAt = performance.now();
-      const profileResponse = await fetchWithTimeout(`${API_BASE_URL}/api/users/current/`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
 
-      console.log('Profile response status:', profileResponse.status, `(${Math.round(performance.now() - profileStartedAt)} ms)`);
+      const profileResponse = await fetchWithTimeout(
+        `${API_BASE_URL}/api/users/current/`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      console.log(
+        'Profile response status:',
+        profileResponse.status,
+        `(${Math.round(performance.now() - profileStartedAt)} ms)`
+      );
 
       let userProfile = {
         username,
@@ -82,28 +123,72 @@ export const AuthProvider = ({ children }) => {
 
       if (profileResponse.ok) {
         const profile = await profileResponse.json();
+
         console.log('Profile data received:', profile);
+
         userProfile = {
           ...userProfile,
           ...profile,
           role: resolveRole(profile.role, profile.is_superuser),
         };
       } else {
-        console.warn('Profile fetch failed with status:', profileResponse.status);
+        console.warn(
+          'Profile fetch failed with status:',
+          profileResponse.status
+        );
       }
 
       const userData = {
         ...userProfile,
         token: accessToken,
-        role: resolveRole(userProfile.role, userProfile.is_superuser),
+        role: resolveRole(
+          userProfile.role,
+          userProfile.is_superuser
+        ),
       };
+
+      /*
+       * Clear any previous session first.
+       * This prevents an old Remember Me session from remaining active.
+       */
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+
+      sessionStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('refresh_token');
+
+      /*
+       * Remember Me checked:
+       * Keep authentication in localStorage.
+       *
+       * Remember Me unchecked:
+       * Keep authentication only in sessionStorage.
+       */
+      const storage = rememberMe ? localStorage : sessionStorage;
+
+      storage.setItem('user', JSON.stringify(userData));
+      storage.setItem('token', accessToken);
+      storage.setItem('access_token', accessToken);
+
+      if (refreshToken) {
+        storage.setItem('refresh_token', refreshToken);
+      }
 
       setUser(userData);
       setToken(accessToken);
       setIsAuthenticated(true);
-      localStorage.setItem('user', JSON.stringify(userData));
-      localStorage.setItem('token', accessToken);
-      console.log('Login successful for user:', username);
+
+      console.log(
+        'Login successful for user:',
+        username,
+        '| Remember Me:',
+        rememberMe
+      );
+
       return userData;
     } catch (err) {
       console.error('Login error:', err);
@@ -115,39 +200,82 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     setIsAuthenticated(false);
+
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
+
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('access_token');
+    sessionStorage.removeItem('refresh_token');
   };
 
   const updateUserProfile = (updates) => {
     setUser((currentUser) => {
-      const updatedUser = { ...currentUser, ...updates };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      const updatedUser = {
+        ...currentUser,
+        ...updates,
+      };
+
+      const userStorage =
+        localStorage.getItem('user') !== null
+          ? localStorage
+          : sessionStorage;
+
+      userStorage.setItem('user', JSON.stringify(updatedUser));
+
       return updatedUser;
     });
   };
 
   const checkAuth = () => {
-    const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('access_token') || localStorage.getItem('token');
+    const storedUser =
+      localStorage.getItem('user') ||
+      sessionStorage.getItem('user');
+
+    const storedToken =
+      localStorage.getItem('access_token') ||
+      sessionStorage.getItem('access_token') ||
+      localStorage.getItem('token') ||
+      sessionStorage.getItem('token');
+
     try {
-      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      const parsedUser = storedUser
+        ? JSON.parse(storedUser)
+        : null;
+
       setUser(parsedUser);
       setToken(storedToken);
-      setIsAuthenticated(Boolean(parsedUser && storedToken));
+      setIsAuthenticated(
+        Boolean(parsedUser && storedToken)
+      );
     } catch {
       setUser(null);
       setToken(null);
       setIsAuthenticated(false);
+
       localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
     }
+
     setAuthReady(true);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, authReady, token, login, logout, updateUserProfile, checkAuth }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        authReady,
+        token,
+        login,
+        logout,
+        updateUserProfile,
+        checkAuth,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -155,8 +283,13 @@ export const AuthProvider = ({ children }) => {
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
+
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error(
+      'useAuth must be used within AuthProvider'
+    );
   }
+
   return context;
 };
+

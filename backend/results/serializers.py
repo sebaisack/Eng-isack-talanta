@@ -27,6 +27,10 @@ class ZoneCompetitionSubmissionSerializer(serializers.ModelSerializer):
 class ResultDetailSerializer(serializers.ModelSerializer):
     talent_name = serializers.CharField(source='talent.talent.name', read_only=True)
     student_name = serializers.SerializerMethodField(read_only=True)
+    student_username = serializers.SerializerMethodField(read_only=True)
+    status = serializers.SerializerMethodField(read_only=True)
+    award_status = serializers.SerializerMethodField(read_only=True)
+    remark = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = ResultDetail
@@ -36,22 +40,118 @@ class ResultDetailSerializer(serializers.ModelSerializer):
             'talent',
             'talent_name',
             'student_name',
+            'student_username',
             'raw_score',
             'percentage_score',
             'passed',
+            'status',
+            'award_status',
+            'remark',
             'promoted_to',
+            'promotion_status',
             'notes',
             'recorded_at',
         ]
+        read_only_fields = ['promotion_status']
 
     def get_student_name(self, obj):
-        return f"{obj.result.participation.student.first_name} {obj.result.participation.student.last_name}"
+        student = obj.result.participation.student
+        return f"{student.first_name} {student.last_name}"
+
+    def get_student_username(self, obj):
+        return obj.result.participation.student.student_id
+
+    def _score(self, obj):
+        if obj.percentage_score is not None:
+            return obj.percentage_score
+
+        # Promoted students initially arrive at district level without marks.
+        # Do not interpret the placeholder raw_score=0 as an actual failure.
+        competition = obj.result.participation.competition
+        if (
+            competition.level == 'district'
+            and obj.promotion_status == 'promoted'
+            and not obj.promoted_to
+        ):
+            return None
+
+        return obj.raw_score
+
+    def get_status(self, obj):
+        score = self._score(obj)
+
+        if score is None:
+            return 'pending'
+
+        # Failed scores always remain FAIL, regardless of promotion status.
+        if score < 50:
+            return 'fail'
+
+        if obj.promotion_status == 'promoted':
+            return 'promoted'
+
+        if obj.promotion_status == 'not_promoted':
+            return 'not_promoted'
+
+        return 'pending'
+
+    def get_award_status(self, obj):
+        score = self._score(obj)
+
+        if score is not None and score >= 50:
+            return 'awarded'
+
+        return 'none'
+
+    def get_remark(self, obj):
+        score = self._score(obj)
+
+        if score is None:
+            return ''
+
+        if score >= 90:
+            return 'Excellent'
+
+        if score >= 75:
+            return 'Very Good'
+
+        if score >= 50:
+            return 'Good'
+
+        return 'Poor'
 
     def validate(self, attrs):
+        attrs = super().validate(attrs)
+
         for field_name in ('raw_score', 'percentage_score'):
-            score = attrs.get(field_name, getattr(self.instance, field_name, None))
+            score = attrs.get(
+                field_name,
+                getattr(self.instance, field_name, None)
+            )
+
             if score is not None and not 0 <= score <= 100:
-                raise serializers.ValidationError({field_name: 'Score must be between 0 and 100.'})
+                raise serializers.ValidationError({
+                    field_name: 'Score must be between 0 and 100.'
+                })
+
+        result = attrs.get('result', getattr(self.instance, 'result', None))
+        talent = attrs.get('talent', getattr(self.instance, 'talent', None))
+
+        if result is not None and talent is not None:
+            competition = result.participation.competition
+            selected_talent_id = getattr(competition, 'talent_id', None)
+
+            if (
+                selected_talent_id is not None
+                and talent.talent_id != selected_talent_id
+            ):
+                raise serializers.ValidationError({
+                    'talent': (
+                        'Talent must match the talent selected '
+                        'for this competition.'
+                    )
+                })
+
         return attrs
 
 
@@ -60,6 +160,10 @@ class ResultSerializer(serializers.ModelSerializer):
     competition_name = serializers.CharField(source='participation.competition.name', read_only=True)
     competition_level = serializers.CharField(source='participation.competition.level', read_only=True)
     student_name = serializers.SerializerMethodField(read_only=True)
+    student_username = serializers.SerializerMethodField(read_only=True)
+    status = serializers.SerializerMethodField(read_only=True)
+    award_status = serializers.SerializerMethodField(read_only=True)
+    remark = serializers.SerializerMethodField(read_only=True)
     details = ResultDetailSerializer(many=True, read_only=True)
     promotions = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
 
@@ -72,10 +176,14 @@ class ResultSerializer(serializers.ModelSerializer):
             'competition_name',
             'competition_level',
             'student_name',
+            'student_username',
             'score',
             'grade',
             'grade_points',
+            'status',
+            'award_status',
             'award',
+            'remark',
             'rank',
             'venue',
             'competition_date',
@@ -106,7 +214,32 @@ class ResultSerializer(serializers.ModelSerializer):
         return f"{obj.participation.student} – {obj.participation.competition}"
 
     def get_student_name(self, obj):
-        return f"{obj.participation.student.first_name} {obj.participation.student.last_name}"
+        student = obj.participation.student
+        return f"{student.first_name} {student.last_name}"
+
+    def get_student_username(self, obj):
+        return obj.participation.student.student_id
+
+    def get_status(self, obj):
+        if obj.score is None:
+            return 'pending'
+        return 'pending' if obj.score >= 50 else 'fail'
+
+    def get_award_status(self, obj):
+        if obj.score is not None and obj.score >= 50:
+            return 'awarded'
+        return 'none'
+
+    def get_remark(self, obj):
+        if obj.score is None:
+            return ''
+        if obj.score >= 90:
+            return 'Excellent'
+        if obj.score >= 75:
+            return 'Very Good'
+        if obj.score >= 50:
+            return 'Good'
+        return 'Poor'
 
 
 class ResultPromotionSerializer(serializers.ModelSerializer):

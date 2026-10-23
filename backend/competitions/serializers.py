@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from core.models import School
+from core.models import School, Talent
 from students.models import Student
 from .models import Competition, CompetitionParticipation, CompetitionJudge
 
@@ -8,6 +8,9 @@ from .models import Competition, CompetitionParticipation, CompetitionJudge
 class CompetitionSerializer(serializers.ModelSerializer):
     schools = serializers.PrimaryKeyRelatedField(queryset=School.objects.filter(is_approved=True), many=True)
     participants = serializers.PrimaryKeyRelatedField(queryset=Student.objects.all(), many=True, required=False)
+    talent = serializers.PrimaryKeyRelatedField(
+        queryset=Talent.objects.all(), required=False, allow_null=True
+    )
     location = serializers.SerializerMethodField()
     judge_ids = serializers.PrimaryKeyRelatedField(source='judges', many=True, read_only=True)
 
@@ -16,7 +19,8 @@ class CompetitionSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'name',
-            'description',
+            'talent',
+            'description', 'venue',
             'level',
             'start_date',
             'end_date',
@@ -32,6 +36,23 @@ class CompetitionSerializer(serializers.ModelSerializer):
             'judge_ids',
         ]
         read_only_fields = ['organizer', 'approved_by', 'approved_at', 'judge_ids']
+
+    def validate_participants(self, participants):
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+
+        if (
+            user is not None
+            and user.is_authenticated
+            and getattr(user, 'role', None) == 'sport_teacher'
+        ):
+            school_id = user.school_id
+            if any(student.school_id != school_id for student in participants):
+                raise serializers.ValidationError(
+                    'You can select only students from your own school.'
+                )
+
+        return participants
 
     def get_location(self, obj):
         if obj.location is not None:

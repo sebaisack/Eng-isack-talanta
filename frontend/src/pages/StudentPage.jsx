@@ -1,10 +1,11 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Header, ProfileMenu } from '../components/shared';
 import * as apiService from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/Logo1.png';
 import '../styles/dashboard.css';
 import './SportTeacherPage.css';
+import './StudentPage.css';
 
 const list = (response) => response?.data?.results || (Array.isArray(response?.data) ? response.data : []);
 
@@ -43,7 +44,7 @@ export default function StudentPage() {
             console.error('Announcements fetch error:', err);
             return { data: { results: [] } };
           }),
-          apiService.getResults({}).catch(err => {
+          apiService.getAllResults({}).catch(err => {
             console.error('Results fetch error:', err);
             return { data: { results: [] } };
           }),
@@ -51,6 +52,7 @@ export default function StudentPage() {
 
         const announcementsList = list(announcementsResponse);
         const resultsList = list(resultsResponse);
+
 
         console.log('StudentPage: Processed announcements:', announcementsList.length);
         console.log('StudentPage: Processed results:', resultsList.length);
@@ -106,13 +108,13 @@ export default function StudentPage() {
   };
 
   const totalResults = results.length;
-  const passedResults = results.filter((r) => Number(r.score ?? 0) >= 50).length;
-  const failedResults = totalResults - passedResults;
+  const passedResults = results.filter((r) => r.status === 'pending').length;
+  const failedResults = results.filter((r) => r.status === 'fail').length;
   const totalAnnouncements = announcements.length;
   const successRate = totalResults > 0 ? Math.round((passedResults / totalResults) * 100) : 0;
 
   return (
-    <div className="sport-teacher-page">
+    <div className="sport-teacher-page student-page">
       <header className="sport-teacher-app-bar">
         <div className="sport-teacher-brand">
           <img src={logo} alt="Talanta logo" />
@@ -141,13 +143,23 @@ export default function StudentPage() {
         </div>
       </header>
 
-      <aside className={`sport-teacher-navigation ${navigationOpen ? 'is-open' : ''}`}>
-        <div className="sport-teacher-navigation-heading">Student Dashboard</div>
+      <aside
+        className={`sport-teacher-navigation student-bootstrap-navigation nav flex-column gap-1 p-2 ${
+          navigationOpen ? 'is-open' : ''
+        }`}
+        aria-label="Student navigation"
+      >
+        <div className="sport-teacher-navigation-heading px-2 py-2">
+          Student Dashboard
+        </div>
         {NAV_ITEMS.map(([key, label]) => (
           <button
             type="button"
             key={key}
-            className={activeTab === key ? 'active' : ''}
+            className={`btn text-start w-100 student-bootstrap-nav-link ${
+              activeTab === key ? 'active' : ''
+            }`}
+            aria-current={activeTab === key ? 'page' : undefined}
             onClick={() => {
               setActiveTab(key);
               setNavigationOpen(false);
@@ -229,18 +241,22 @@ export default function StudentPage() {
                         <thead>
                           <tr>
                             <th>Competition</th>
-                            <th>Score</th>
+                            <th>Username</th>
+                            <th>Marks</th>
                             <th>Grade</th>
                             <th>Status</th>
+                            <th>Award</th>
+                            <th>Remark</th>
                           </tr>
                         </thead>
                         <tbody>
                           {results.slice(0, 5).map((result) => {
-                            const score = Number(result.score ?? 0);
-                            const status = score >= 50 ? 'Pass' : 'Fail';
+                              const awardStatus = result.award_status || 'none';
+
                             return (
                               <tr key={result.id}>
                                 <td>{result.competition_name || 'Competition'}</td>
+                                <td>{result.student_username || user?.student_id || '-'}</td>
                                 <td>{result.score ?? 'N/A'}%</td>
                                 <td>{result.grade || 'N/A'}</td>
                                 <td>
@@ -251,13 +267,17 @@ export default function StudentPage() {
                                       borderRadius: '4px',
                                       fontSize: '12px',
                                       fontWeight: 600,
-                                      background: status === 'Pass' ? '#dcfce7' : '#fee2e2',
-                                      color: status === 'Pass' ? '#166534' : '#991b1b',
+                                      background: status === 'fail' ? '#fee2e2' : '#fef3c7',
+                                      color: status === 'fail' ? '#991b1b' : '#92400e',
                                     }}
                                   >
-                                    {status}
+                                    {status === 'fail' ? 'Fail' : 'Pending'}
                                   </span>
                                 </td>
+                                <td>
+                                  {awardStatus === 'awarded' ? 'Awarded' : 'None'}
+                                </td>
+                                <td>{result.remark || '-'}</td>
                               </tr>
                             );
                           })}
@@ -303,66 +323,177 @@ export default function StudentPage() {
             )}
 
             {/* RESULTS TAB */}
-            {activeTab === 'results' && (
-              <section className="talent-admin-table-card" style={{ width: 'min(100%, 1100px)', margin: '0 auto' }}>
-                <div className="talent-admin-table-header">
-                  <div>
-                    <h2 style={{ margin: 0 }}>My Results</h2>
-                    <p style={{ margin: '8px 0 0 0', color: '#64748b', fontSize: '14px' }}>
-                      Your competition results and performance
-                    </p>
+            {activeTab === 'results' && (() => {
+              const schoolResults = results.filter(
+                (result) => result.competition_level === 'school'
+              );
+              const districtResults = results.filter(
+                (result) => result.competition_level === 'district'
+              );
+
+              const promotionLabel = (result) => {
+                const details = Array.isArray(result.details) ? result.details : [];
+                if (!details.length) return 'Pending';
+
+                const labels = [...new Set(details.map((detail) => {
+                  const value = detail.promotion_status || 'pending';
+                  if (value === 'promoted') return 'Promoted';
+                  if (value === 'not_promoted') return 'Not Promoted';
+                  return 'Pending';
+                }))];
+
+                return labels.join(' / ');
+              };
+
+              const renderTable = (title, items) => (
+                <section
+                  className="talent-admin-table-card student-results-card"
+                  style={{ width: 'min(100%, 1100px)', margin: '0 auto 24px auto' }}
+                >
+                  <div className="talent-admin-table-header">
+                    <div>
+                      <h2 style={{ margin: 0 }}>{title}</h2>
+                      <p style={{ margin: '8px 0 0 0', color: '#64748b', fontSize: '14px' }}>
+                        {items.length} result{items.length === 1 ? '' : 's'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="talent-admin-table-wrap">
-                  <table className="talent-admin-table">
-                    <thead>
-                      <tr>
-                        <th>Competition</th>
-                        <th>Score</th>
-                        <th>Grade</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {results.length > 0 ? (
-                        results.map((result) => {
-                          const score = Number(result.score ?? 0);
-                          const status = score >= 50 ? 'Pass' : 'Fail';
+                  <div className="talent-admin-table-wrap">
+                    <table className="talent-admin-table student-results-table">
+                      <thead>
+                        <tr>
+                          <th>Competition</th>
+                          <th>Username</th>
+                          <th>Marks</th>
+                          <th>Grade</th>
+                          <th>Promotion Status</th>
+                          <th>Award</th>
+                          <th>Remark</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {items.length > 0 ? items.map((result) => {
+                          const status = result.status || 'pending';
+                          const awardStatus = result.award_status || 'none';
+                          const details = Array.isArray(result.details) ? result.details : [];
+                          const promotionStatuses = details.length
+                            ? details.map((detail) => {
+                                const scoreValue = detail.percentage_score ?? detail.raw_score;
+                                const score = scoreValue == null ? null : Number(scoreValue);
+
+                                if (score !== null && score < 50) return 'Fail';
+
+                                const value = detail.promotion_status || 'pending';
+                                if (value === 'promoted') return 'Promoted';
+                                if (value === 'not_promoted') return 'Not Promoted';
+                                return 'Pending';
+                              })
+                            : [Number(result.score) < 50 ? 'Fail' : 'Pending'];
+
+                          const promotionStatus = [...new Set(promotionStatuses)].join(' / ');
+
                           return (
                             <tr key={result.id}>
                               <td>{result.competition_name || 'Competition'}</td>
-                              <td>{result.score ?? 'N/A'}%</td>
-                              <td>{result.grade || 'N/A'}</td>
+                              <td>{result.student_username || user?.student_id || '-'}</td>
                               <td>
-                                <span
-                                  style={{
-                                    display: 'inline-block',
-                                    padding: '0.25rem 0.6rem',
-                                    borderRadius: '4px',
-                                    fontSize: '12px',
-                                    fontWeight: 600,
-                                    background: status === 'Pass' ? '#dcfce7' : '#fee2e2',
-                                    color: status === 'Pass' ? '#166534' : '#991b1b',
-                                  }}
-                                >
-                                  {status}
+                                {(() => {
+                                  const scores = details
+                                    .map((detail) => detail.percentage_score ?? detail.raw_score)
+                                    .filter((score) => score !== null && score !== undefined)
+                                    .map(Number);
+                                  const shownScores = scores.length
+                                    ? scores
+                                    : result.score !== null && result.score !== undefined
+                                      ? [Number(result.score)]
+                                      : [];
+                                  return shownScores.length
+                                    ? shownScores.map((score) => `${score}%`).join(' / ')
+                                    : 'N/A';
+                                })()}
+                              </td>
+                              <td>
+                                {(() => {
+                                  const scores = details
+                                    .map((detail) => detail.percentage_score ?? detail.raw_score)
+                                    .filter((score) => score !== null && score !== undefined)
+                                    .map(Number);
+                                  const shownScores = scores.length
+                                    ? scores
+                                    : result.score !== null && result.score !== undefined
+                                      ? [Number(result.score)]
+                                      : [];
+                                  const gradeForScore = (score) => {
+                                    if (score >= 90) return 'A+';
+                                    if (score >= 75) return 'A';
+                                    if (score >= 60) return 'B+';
+                                    if (score >= 50) return 'B';
+                                    if (score >= 40) return 'C';
+                                    if (score >= 30) return 'D';
+                                    if (score >= 20) return 'E';
+                                    return 'F';
+                                  };
+                                  return shownScores.length
+                                    ? shownScores.map(gradeForScore).join(' / ')
+                                    : 'N/A';
+                                })()}
+                              </td>
+                              <td>
+                                <span className={`student-promotion-status ${
+                                  promotionStatus.toLowerCase().includes('fail')
+                                    ? 'is-fail'
+                                    : promotionStatus.toLowerCase().includes('not promoted')
+                                      ? 'is-not-promoted'
+                                      : promotionStatus.toLowerCase().includes('promoted')
+                                        ? 'is-promoted'
+                                        : 'is-pending'
+                                }`}>
+                                  {promotionStatus}
                                 </span>
+                              </td>
+                              <td>
+                                {details.length > 0
+                                  ? [...new Set(details.map((detail) =>
+                                      detail.award_status === 'awarded' ? 'Awarded' : 'None'
+                                    ))].join(' / ')
+                                  : (awardStatus === 'awarded' ? 'Awarded' : 'None')}
+                              </td>
+                              <td>
+                                {details.length > 0
+                                  ? [...new Set(details.map((detail) => {
+                                      if (detail.remark) return detail.remark;
+                                      const value = detail.percentage_score ?? detail.raw_score;
+                                      if (value == null) return '-';
+                                      const score = Number(value);
+                                      if (score >= 90) return 'Excellent';
+                                      if (score >= 75) return 'Very Good';
+                                      if (score >= 50) return 'Good';
+                                      return 'Poor';
+                                    }))].join(' / ')
+                                  : (result.remark || '-')}
                               </td>
                             </tr>
                           );
-                        })
-                      ) : (
-                        <tr>
-                          <td colSpan="4" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
-                            No results found yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                        }) : (
+                          <tr>
+                            <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
+                              No results found yet.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              );
+
+              return (
+                <div>
+                  {renderTable('School Results', schoolResults)}
+                  {renderTable('District Results', districtResults)}
                 </div>
-              </section>
-            )}
+              );
+            })()}
 
             {/* ANNOUNCEMENTS TAB */}
             {activeTab === 'announcements' && (

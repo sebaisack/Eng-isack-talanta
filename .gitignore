@@ -1,35 +1,58 @@
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 *.sqlite3
-.env
-vee/
-# Django migrations (if any)
-*/migrations/
-# Backend virtual environment
-backend/venv/
 venv/
-# Backend cache
-backend/__pycache__/
-# Frontend
+vee/
+backend/venv/
+
+# Django: keep all migrations tracked
+# Do not ignore migrations directories.
+
+# Frontend dependencies and build output
 frontend/node_modules/
 frontend/.next/
 frontend/dist/
 frontend/build/
-# Frontend env files
-frontend/.env
-# IDE / editor files
+
+# IDE and operating system
 .vscode/
 .idea/
-# OS files
 .DS_Store
 Thumbs.db
-# Logs
+
+# Logs and test artifacts
 *.log
-# Test artifacts
 .coverage
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+
+# Local backups and database dumps
+backups/
+backend/backups/
+*.sql
+*.sql.gz
+*.backup
+*.backup-*
+*.bak
+*.bak-*
+*.corrupted-backup
+# Keep local code backups out of GitHub
+*.backup*
+*.bak*
+*.before-*
+*.corrupted-backup
+
+# Local accidental empty file
+/frontend/frontend@0.0.0

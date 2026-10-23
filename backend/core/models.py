@@ -81,15 +81,30 @@ class School(models.Model):
     name = models.CharField(max_length=150)
     ownership_type = models.CharField(max_length=100, default='Government')
     country = models.ForeignKey(Country, on_delete=models.PROTECT, related_name="schools")
-    zone = models.ForeignKey(Zone, on_delete=models.PROTECT, related_name="schools")
-    region = models.ForeignKey(Region, on_delete=models.PROTECT, related_name="schools")
-    district = models.ForeignKey(District, on_delete=models.PROTECT, related_name="schools")
-    ward = models.ForeignKey(Ward, on_delete=models.PROTECT, related_name="schools")
+    zone = models.ForeignKey(
+        Zone, on_delete=models.PROTECT, related_name="schools",
+        null=True, blank=True,
+    )
+    region = models.ForeignKey(
+        Region, on_delete=models.PROTECT, related_name="schools",
+        null=True, blank=True,
+    )
+    district = models.ForeignKey(
+        District, on_delete=models.PROTECT, related_name="schools",
+        null=True, blank=True,
+    )
+    ward = models.ForeignKey(
+        Ward, on_delete=models.PROTECT, related_name="schools",
+        null=True, blank=True,
+    )
+    city_council = models.CharField(max_length=150, blank=True, default="")
+    street_village = models.CharField(max_length=150, blank=True, default="")
     phone = models.CharField(max_length=20, blank=True, null=True)
     physical_address = models.CharField(max_length=255, blank=True)
     email = models.EmailField(blank=True, null=True)
     student_count = models.PositiveIntegerField(default=0)
     is_approved = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -108,6 +123,7 @@ class School(models.Model):
 class User(AbstractUser):
     """Custom user extending Django's ``AbstractUser`` with role and optional school link."""
     ROLE_CHOICES = [
+        ("admin", "Admin"),
         ("talent_admin", "Talent Admin"),
         ("region_manager", "Region Manager"),
         ("zone_manager", "Zone Manager"),
@@ -119,6 +135,13 @@ class User(AbstractUser):
         ("parent", "Parent"),
     ]
     role = models.CharField(max_length=30, choices=ROLE_CHOICES)
+    created_by = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_users",
+    )
     phone = models.CharField(max_length=20, blank=True, null=True)
     school = models.ForeignKey(School, on_delete=models.SET_NULL, null=True, blank=True, related_name="users")
     student = models.OneToOneField('students.Student', on_delete=models.SET_NULL, null=True, blank=True, related_name="user")
@@ -128,6 +151,8 @@ class User(AbstractUser):
     district = models.ForeignKey(District, on_delete=models.SET_NULL, null=True, blank=True, related_name="scoped_users")
     ward = models.ForeignKey(Ward, on_delete=models.SET_NULL, null=True, blank=True, related_name="scoped_users")
 
+    city_council = models.CharField(max_length=150, blank=True, default="")
+    street_village = models.CharField(max_length=150, blank=True, default="")
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
@@ -202,6 +227,12 @@ class StudentTalent(models.Model):
 
 class Announcement(models.Model):
     """System announcements with geographic scope."""
+    AUDIENCE_CHOICES = [
+        ('students', 'Students only'),
+        ('sport_teachers', 'Sports Teachers only'),
+        ('both', 'Students and Sports Teachers'),
+    ]
+
     SCOPE_CHOICES = [
         ('national', 'National'),
         ('zone', 'Zone'),
@@ -213,6 +244,7 @@ class Announcement(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
     scope = models.CharField(max_length=20, choices=SCOPE_CHOICES, default='national')
+    audience = models.CharField(max_length=20, choices=AUDIENCE_CHOICES, default='both')
     
     # Geographic scoping (optional; for zone/region/district/school scope)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, null=True, blank=True, related_name='announcements')
@@ -306,7 +338,6 @@ class StudentClubMembership(models.Model):
         ordering = ['-joined_at']
         constraints = [
             models.UniqueConstraint(fields=['student', 'club'], name='unique_student_club_membership'),
-            models.UniqueConstraint(fields=['student'], condition=models.Q(is_active=True), name='one_active_club_per_student'),
         ]
 
     def clean(self):

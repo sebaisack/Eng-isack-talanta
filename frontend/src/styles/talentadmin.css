@@ -1674,3 +1674,673 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Align Talent Admin search and action buttons */
+.talent-admin-card-header-row {
+  align-items: center !important;
+}
+
+.talent-admin-card-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.talent-admin-inline-search input,
+.talent-admin-add-button {
+  box-sizing: border-box !important;
+  height: 32px !important;
+  min-height: 32px !important;
+}
+
+.talent-admin-add-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+/* Fix Talent Admin Talents and Clubs header alignment */
+.talent-admin-combined-layout .talent-admin-card-header-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  gap: 12px !important;
+}
+
+.talent-admin-combined-layout .talent-admin-card-header-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  margin-left: auto !important;
+}
+
+.talent-admin-combined-layout .talent-admin-inline-search {
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 !important;
+}
+
+.talent-admin-combined-layout .talent-admin-inline-search input,
+.talent-admin-combined-layout .talent-admin-add-button {
+  height: 34px !important;
+  min-height: 34px !important;
+  box-sizing: border-box !important;
+}
+
+.talent-admin-combined-layout .talent-admin-add-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 12px !important;
+  white-space: nowrap !important;
+  margin: 0 !important;
+}
+
+/* ==========================================
+   TALENT ADMIN — MODERN FULL-PAGE DESIGN
+   Visual improvements only; preserve behavior
+   ========================================== */
+
+.talent-admin-page {
+  --ta-primary: #3347b8;
+  --ta-primary-dark: #24358f;
+  --ta-text: #172033;
+  --ta-muted: #64748b;
+  --ta-border: #e2e8f0;
+  --ta-surface: #ffffff;
+  --ta-page-bg: #f5f7fc;
+  color: var(--ta-text);
+  background: var(--ta-page-bg);
+}
+
+.talent-admin-page .talent-admin-content {
+  box-sizing: border-box;
+  padding-top: 64px;
+  padding-bottom: 40px
+;}
+
+.talent-admin-page .talent-admin-table-card,
+.talent-admin-page .talent-admin-card,
+.talent-admin-page .talent-admin-form-card,
+.talent-admin-page .talent-admin-list-card {
+  min-width: 0;
+  border: 1px solid var(--ta-border);
+  border-radius: 16px;
+  background: var(--ta-surface);
+  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.045);
+}
+
+.talent-admin-page .talent-admin-table-header {
+  gap: 16px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #edf0f6;
+}
+
+.talent-admin-page .talent-admin-table-header h1 {
+  color: var(--ta-text);
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 800;
+  letter-spacing: -0.45px;
+  line-height: 1.35;
+}
+
+.talent-admin-page .talent-admin-table-header p:last-child {
+  margin-top: 7px;
+  color: var(--ta-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.talent-admin-page .talent-admin-user-tools {
+  gap: 12px;
+}
+
+.talent-admin-page .talent-admin-filter-field input,
+.talent-admin-page .talent-admin-filter-field select,
+.talent-admin-page .talent-admin-inline-search input,
+.talent-admin-page .talent-admin-floating-field input,
+.talent-admin-page .talent-admin-floating-field textarea {
+  box-sizing: border-box;
+  max-width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--ta-text);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.talent-admin-page .talent-admin-filter-field input:focus,
+.talent-admin-page .talent-admin-filter-field select:focus,
+.talent-admin-page .talent-admin-inline-search input:focus,
+.talent-admin-page .talent-admin-floating-field input:focus,
+.talent-admin-page .talent-admin-floating-field textarea:focus {
+  border-color: var(--ta-primary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(51, 71, 184, 0.12);
+}
+
+.talent-admin-page .talent-admin-role-tabs-scroll {
+  padding: 4px 0;
+}
+
+.talent-admin-page .talent-admin-role-tabs {
+  gap: 8px;
+}
+
+.talent-admin-page .talent-admin-role-tab {
+  min-height: 38px;
+  padding: 9px 15px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 650;
+  transition: background 0.18s ease, color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.talent-admin-page .talent-admin-role-tab.is-active {
+  border-color: var(--ta-primary);
+  background: var(--ta-primary);
+  color: #ffffff;
+}
+
+.talent-admin-page .talent-admin-add-school-button,
+.talent-admin-page .talent-admin-add-user-button,
+.talent-admin-page .talent-admin-add-button {
+  min-height: 40px;
+  border-radius: 9px;
+  font-weight: 700;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.talent-admin-page .talent-admin-add-school-button:hover,
+.talent-admin-page .talent-admin-add-user-button:hover,
+.talent-admin-page .talent-admin-add-button:hover {
+  box-shadow: 0 5px 12px rgba(51, 71, 184, 0.16);
+  transform: translateY(-1px);
+}
+
+.talent-admin-page .talent-admin-table-wrap,
+.talent-admin-page .talent-admin-card-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.talent-admin-page .talent-admin-table,
+.talent-admin-page .talent-admin-card-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.talent-admin-page .talent-admin-table th,
+.talent-admin-page .talent-admin-card-table th {
+  padding: 13px 16px;
+  background: #f5f7fc;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.talent-admin-page .talent-admin-table td,
+.talent-admin-page .talent-admin-card-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #edf0f6;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.65;
+  vertical-align: middle;
+}
+
+.talent-admin-page .talent-admin-table tbody tr:last-child td,
+.talent-admin-page .talent-admin-card-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.talent-admin-page .talent-admin-table tbody tr:hover,
+.talent-admin-page .talent-admin-card-table tbody tr:hover {
+  background: #f8faff;
+}
+
+.talent-admin-page .talent-admin-card h3 {
+  color: var(--ta-text);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.talent-admin-page .talent-admin-card-header-row {
+  gap: 14px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #edf0f6;
+}
+
+.talent-admin-page .talent-admin-card-item,
+.talent-admin-page .talent-admin-collection-item {
+  border: 1px solid var(--ta-border);
+  border-radius: 12px;
+  background: #ffffff;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.talent-admin-page .talent-admin-card-item:hover,
+.talent-admin-page .talent-admin-collection-item:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 5px 15px rgba(15, 23, 42, 0.05);
+}
+
+.talent-admin-page .talent-admin-quick-link {
+  border: 1px solid var(--ta-border);
+  border-radius: 12px;
+  background: #ffffff;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.talent-admin-page .talent-admin-quick-link:hover,
+.talent-admin-page .talent-admin-quick-link:focus-visible {
+  border-color: #a5b4fc;
+  box-shadow: 0 7px 18px rgba(51, 71, 184, 0.09);
+  transform: translateY(-2px);
+}
+
+.talent-admin-page .talent-admin-link-button {
+  color: var(--ta-primary);
+  font-weight: 700;
+}
+
+.talent-admin-page .talent-admin-empty,
+.talent-admin-page .talent-admin-placeholder {
+  color: var(--ta-muted);
+  line-height: 1.8;
+}
+
+.talent-admin-page button:focus-visible,
+.talent-admin-page a:focus-visible {
+  outline: 3px solid rgba(51, 71, 184, 0.3);
+  outline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+  .talent-admin-page .talent-admin-content {
+    padding: 18px 12px 28px;
+  }
+
+  .talent-admin-page .talent-admin-table-header {
+    padding: 17px;
+  }
+
+  .talent-admin-page .talent-admin-table th,
+  .talent-admin-page .talent-admin-table td,
+  .talent-admin-page .talent-admin-card-table th,
+  .talent-admin-page .talent-admin-card-table td {
+    padding: 11px 12px;
+  }
+
+  .talent-admin-page .talent-admin-user-tools {
+    width: 100%;
+  }
+
+  .talent-admin-page .talent-admin-filter-field input,
+  .talent-admin-page .talent-admin-filter-field select {
+    max-width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .talent-admin-page *,
+  .talent-admin-page *::before,
+  .talent-admin-page *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* FIX: Make Talent Admin action button labels visible */
+.talent-admin-page .talent-admin-add-user-button,
+.talent-admin-page .talent-admin-add-school-button,
+.talent-admin-page .talent-admin-add-button {
+  color: #ffffff !important;
+  background-color: #3347b8 !important;
+  border: 1px solid #3347b8 !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  text-indent: 0 !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.talent-admin-page .talent-admin-add-user-button *,
+.talent-admin-page .talent-admin-add-school-button *,
+.talent-admin-page .talent-admin-add-button * {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.talent-admin-page .talent-admin-add-user-button:hover,
+.talent-admin-page .talent-admin-add-school-button:hover,
+.talent-admin-page .talent-admin-add-button:hover {
+  background-color: #24358f !important;
+  border-color: #24358f !important;
+}
+
+/* FIX: Prevent Talent Admin action labels from being clipped */
+.talent-admin-page .district-primary-button.talent-admin-add-user-button,
+.talent-admin-page .district-primary-button.talent-admin-add-school-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  min-height: 40px !important;
+  padding: 8px 12px !important;
+  line-height: 1.3 !important;
+  vertical-align: middle !important;
+  overflow: visible !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+.talent-admin-page .district-primary-button.talent-admin-add-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  padding: 0 9px !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  overflow: visible !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+}
+
+.talent-admin-page .talent-admin-table-header {
+  align-items: center !important;
+}
+
+.talent-admin-page .talent-admin-table-header h1 {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Compact Add Talent and Add Club buttons only */
+.talent-admin-page .talent-admin-combined-layout .district-primary-button.talent-admin-add-button {
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  padding: 0 7px !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+  border-radius: 5px !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+}
+
+/* Extra-small Add Talent and Add Club buttons */
+.talent-admin-combined-layout .talent-admin-add-button {
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  padding: 0 6px !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+}
+
+/* Reduce horizontal width of Add Talent and Add Club buttons */
+.talent-admin-combined-layout .talent-admin-add-button {
+  width: 50% !important;
+  min-width: 0 !important;
+  flex: 0 1 50% !important;
+  box-sizing: border-box !important;
+}
+
+/* Stack Talents/Clubs headings above their Add buttons */
+.talent-admin-combined-layout .talent-admin-card-header-row {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+}
+
+.talent-admin-combined-layout .talent-admin-card-header-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  width: 100% !important;
+  margin-left: 0 !important;
+  gap: 8px !important;
+}
+
+.talent-admin-combined-layout .talent-admin-add-button {
+  width: 50% !important;
+  flex: 0 0 auto !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
+  padding: 0 6px !important;
+  margin: 0 !important;
+}
+
+.talent-admin-combined-layout .talent-admin-inline-search {
+  width: 100% !important;
+}
+
+/* Keep Add buttons first, followed by Search on the same horizontal line */
+.talent-admin-combined-layout .talent-admin-card-header-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  gap: 8px !important;
+  margin-left: 0 !important;
+}
+
+.talent-admin-combined-layout .talent-admin-add-button {
+  order: 1 !important;
+  flex: 0 0 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  white-space: nowrap !important;
+}
+
+.talent-admin-combined-layout .talent-admin-inline-search {
+  order: 2 !important;
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.talent-admin-combined-layout .talent-admin-inline-search input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Make Add and Search controls equal in height */
+.talent-admin-combined-layout .talent-admin-add-button,
+.talent-admin-combined-layout .talent-admin-inline-search,
+.talent-admin-combined-layout .talent-admin-inline-search input {
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  box-sizing: border-box !important;
+}
+
+.talent-admin-combined-layout .talent-admin-inline-search {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.talent-admin-combined-layout .talent-admin-add-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1 !important;
+}
+
+.talent-admin-combined-layout .talent-admin-inline-search input {
+  width: 100% !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: normal !important;
+}
+
+/* FINAL OVERRIDE: equal height for Add and Search controls */
+.talent-admin-page .talent-admin-combined-layout .talent-admin-card-header-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+}
+
+.talent-admin-page .talent-admin-combined-layout button.talent-admin-add-button,
+.talent-admin-page .talent-admin-combined-layout .talent-admin-inline-search,
+.talent-admin-page .talent-admin-combined-layout .talent-admin-inline-search input {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  box-sizing: border-box !important;
+}
+
+.talent-admin-page .talent-admin-combined-layout button.talent-admin-add-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 7px !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
+}
+
+.talent-admin-page .talent-admin-combined-layout .talent-admin-inline-search {
+  display: flex !important;
+  align-items: stretch !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+.talent-admin-page .talent-admin-combined-layout .talent-admin-inline-search input {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin: 0 !important;
+}
+
+
+/* TALENT ADMIN BOOTSTRAP TABLE ENHANCEMENTS */
+.talent-admin-page .talent-admin-table-wrap,
+.talent-admin-page .talent-admin-card-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.045);
+  -webkit-overflow-scrolling: touch;
+}
+
+.talent-admin-page .talent-admin-table,
+.talent-admin-page .talent-admin-card-table {
+  width: 100%;
+  margin-bottom: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+}
+
+.talent-admin-page .talent-admin-table thead th,
+.talent-admin-page .talent-admin-card-table thead th {
+  padding: 14px 16px;
+  border-bottom: 1px solid #dfe6f1;
+  background: #f1f5fb;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.talent-admin-page .talent-admin-table tbody td,
+.talent-admin-page .talent-admin-card-table tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid #edf1f7;
+  color: #334155;
+  font-size: 13px;
+  line-height: 1.55;
+  vertical-align: middle;
+}
+
+.talent-admin-page .talent-admin-table tbody tr:nth-child(even),
+.talent-admin-page .talent-admin-card-table tbody tr:nth-child(even) {
+  background: #fafbfe;
+}
+
+.talent-admin-page .talent-admin-table tbody tr:hover,
+.talent-admin-page .talent-admin-card-table tbody tr:hover {
+  background: #eef4ff;
+}
+
+.talent-admin-page .talent-admin-table tbody tr:last-child td,
+.talent-admin-page .talent-admin-card-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.talent-admin-page .talent-admin-table .btn,
+.talent-admin-page .talent-admin-card-table .btn {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.talent-admin-page .talent-admin-table-wrap:focus-within,
+.talent-admin-page .talent-admin-card-table-wrap:focus-within {
+  outline: 2px solid rgba(14, 29, 182, 0.16);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .talent-admin-page .talent-admin-table,
+  .talent-admin-page .talent-admin-card-table {
+    min-width: 680px;
+  }
+
+  .talent-admin-page .talent-admin-table thead th,
+  .talent-admin-page .talent-admin-card-table thead th,
+  .talent-admin-page .talent-admin-table tbody td,
+  .talent-admin-page .talent-admin-card-table tbody td {
+    padding: 11px 12px;
+  }
+}

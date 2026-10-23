@@ -34,19 +34,35 @@ class StudentViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='register')
     def register(self, request):
         if request.user.role not in {'head_teacher', 'sport_teacher'}:
-            return Response({'detail': 'Only school teachers can register students.'}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'detail': 'Only school teachers can register students.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         school = request.user.school
+
         if school is None:
-            return Response({'detail': 'This teacher has no assigned school.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'This teacher has no assigned school.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         talent_ids = list(dict.fromkeys(request.data.get('talents') or []))
+
         if len(talent_ids) > 5:
-            return Response({'talents': 'A student may have at most five talents.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'talents': 'A student may have at most five talents.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         club_id = request.data.get('club') or None
         password = request.data.get('password')
+
         if not password:
-            return Response({'password': 'A password is required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'password': 'A password is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         student_data = {
             'first_name': request.data.get('first_name'),
@@ -56,23 +72,42 @@ class StudentViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
             'education_level_id': request.data.get('education_level_id') or None,
             'school_id': school.pk,
         }
+
         student_serializer = StudentSerializer(data=student_data)
         student_serializer.is_valid(raise_exception=True)
 
         club = None
+
         if club_id:
-            club = SchoolClub.objects.filter(pk=club_id, school=school, is_active=True).first()
+            club = SchoolClub.objects.filter(
+                pk=club_id,
+                school=school,
+                is_active=True
+            ).first()
+
             if club is None:
-                return Response({'club': 'Choose an active club registered for this school.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {'club': 'Choose an active club registered for this school.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
         talents = list(Talent.objects.filter(pk__in=talent_ids))
+
         if len(talents) != len(talent_ids):
-            return Response({'talents': 'One or more selected talents are invalid.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'talents': 'One or more selected talents are invalid.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         with transaction.atomic():
             student = student_serializer.save(school=school)
+
+            # Create a unique username from the student's Student ID.
+            # If the Student ID already exists as a username,
+            # automatically add -1, -2, -3, etc.
             username = student.student_id
             username_suffix = 1
+
             while User.objects.filter(username=username).exists():
                 username = f'{student.student_id}-{username_suffix}'
                 username_suffix += 1
@@ -85,34 +120,79 @@ class StudentViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
                 school=school,
                 student=student,
             )
+
+            # Store the password securely as a Django password hash.
             account.set_password(password)
             account.save()
+
             if club:
-                StudentClubMembership.objects.create(student=student, club=club, is_active=True)
+                StudentClubMembership.objects.create(
+                    student=student,
+                    club=club,
+                    is_active=True
+                )
+
             StudentTalent.objects.bulk_create([
-                StudentTalent(student=student, talent=talent, proficiency_level=1)
+                StudentTalent(
+                    student=student,
+                    talent=talent,
+                    proficiency_level=1
+                )
                 for talent in talents
             ])
 
-        return Response(StudentSerializer(student).data, status=status.HTTP_201_CREATED)
+        # Return the student information together with the exact
+        # username that was created for the student's login.
+        #
+        # The password is NOT returned for security reasons.
+        response_data = StudentSerializer(student).data
+        response_data['username'] = account.username
+        response_data['role'] = account.role
+
+        return Response(
+            response_data,
+            status=status.HTTP_201_CREATED
+        )
 
     @action(detail=True, methods=['post'], url_path='reset-password')
     def reset_password(self, request, pk=None):
         student = self.get_object()
+
         password = request.data.get('password')
         confirmation = request.data.get('confirm_password')
+
         if not password or not confirmation:
-            return Response({'detail': 'Both password fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Both password fields are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if password != confirmation:
-            return Response({'detail': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Passwords do not match.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         if len(password) < 8:
-            return Response({'detail': 'Password must be at least 8 characters long.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Password must be at least 8 characters long.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         account = User.objects.filter(student=student).first()
+
         if account is None:
-            return Response({'detail': 'This student has no linked user account.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'This student has no linked user account.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         account.set_password(password)
         account.save(update_fields=['password'])
-        return Response({'detail': 'Student password updated successfully.'})
+
+        return Response(
+            {'detail': 'Student password updated successfully.'}
+        )
 
 
 class ParentViewSet(viewsets.ModelViewSet):
@@ -129,13 +209,20 @@ class EducationLevelViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+
         country_id = self.request.query_params.get('country')
         level_type = self.request.query_params.get('level_type')
         is_active = self.request.query_params.get('is_active')
+
         if country_id:
             queryset = queryset.filter(country_id=country_id)
+
         if level_type:
             queryset = queryset.filter(level_type=level_type)
+
         if is_active is not None:
-            queryset = queryset.filter(is_active=is_active.lower() in {'1', 'true', 'yes'})
+            queryset = queryset.filter(
+                is_active=is_active.lower() in {'1', 'true', 'yes'}
+            )
+
         return queryset

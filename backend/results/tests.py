@@ -101,7 +101,7 @@ class ResultPromotionLockingTests(TestCase):
 
         school_participation = CompetitionParticipation.objects.create(competition=school_competition, student=self.student, status='finished')
         school_result = Result.objects.create(participation=school_participation, approval_status='pending')
-        school_detail = ResultDetail.objects.create(result=school_result, talent=self.student_talent, raw_score=80, percentage_score=80, promoted_to='district')
+        school_detail = ResultDetail.objects.create(result=school_result, talent=self.student_talent, raw_score=80, percentage_score=80, promoted_to='district', promotion_status='promoted')
         district_participation = CompetitionParticipation.objects.create(competition=district_competition, student=self.student, status='finished')
         district_result = Result.objects.create(participation=district_participation, approval_status='pending')
         district_detail = ResultDetail.objects.create(result=district_result, talent=self.student_talent, raw_score=0, percentage_score=None)
@@ -122,6 +122,7 @@ class ResultPromotionLockingTests(TestCase):
         self.assertEqual(response.data['demoted'], 1)
         school_detail.refresh_from_db()
         self.assertEqual(school_detail.promoted_to, '')
+        self.assertEqual(school_detail.promotion_status, 'pending')
         self.assertFalse(ResultPromotion.objects.filter(pk=district_promotion.pk).exists())
         self.assertFalse(ResultDetail.objects.filter(pk=district_detail.pk).exists())
         self.assertFalse(CompetitionParticipation.objects.filter(pk=district_participation.pk).exists())
@@ -203,6 +204,83 @@ class ResultPromotionLockingTests(TestCase):
         self.assertFalse(ResultPromotion.objects.filter(pk__in=[p.pk for p in ResultPromotion.objects.filter(result=district_result)]).exists())
         self.assertFalse(ResultDetail.objects.filter(pk=zone_detail.pk).exists())
         self.assertFalse(CompetitionParticipation.objects.filter(pk=zone_participation.pk).exists())
+
+
+    def test_finalize_promotion_sets_status_without_changing_scores(self):
+        district_manager = User.objects.create_user(
+            username='district-manager-finalize',
+            password='secret123',
+            role='district_manager',
+            country=self.country,
+            zone=self.zone,
+            region=self.region,
+            district=self.district,
+        )
+        school_competition = Competition.objects.create(
+            name='School Finalize Trials', level='school', status='approved'
+        )
+        school_competition.schools.add(self.school)
+        district_competition = Competition.objects.create(
+            name='District Finalize Trials', level='district', status='approved'
+        )
+        district_competition.content_type = ContentType.objects.get_for_model(District)
+        district_competition.object_id = self.district.pk
+        district_competition.schools.add(self.school)
+        district_competition.save(update_fields=['content_type', 'object_id'])
+
+        submission = SchoolCompetitionSubmission.objects.create(
+            school=self.school, competition=school_competition, status='draft'
+        )
+        participation = CompetitionParticipation.objects.create(
+            competition=school_competition, student=self.student, status='finished'
+        )
+        result = Result.objects.create(
+            participation=participation, score=80, approval_status='pending'
+        )
+        selected_detail = ResultDetail.objects.create(
+            result=result, talent=self.student_talent,
+            raw_score=80, percentage_score=80,
+        )
+        other_talent = Talent.objects.create(
+            name='Running', category=self.talent_category
+        )
+        other_student_talent = self.student.talents.create(
+            talent=other_talent, proficiency_level=3
+        )
+        not_selected_detail = ResultDetail.objects.create(
+            result=result, talent=other_student_talent,
+            raw_score=65, percentage_score=65,
+        )
+        ResultPromotion.objects.create(
+            result=result,
+            result_detail=selected_detail,
+            from_level='school',
+            to_level='district',
+            target_competition=district_competition,
+            promoted_by=district_manager,
+        )
+        submission.status = 'submitted'
+        submission.save(update_fields=['status'])
+
+        request = self.factory.post(
+            f'/api/school-result-submissions/{submission.pk}/finalize_promotion/',
+            {'district_competition_id': district_competition.pk},
+            format='json',
+        )
+        request.user = district_manager
+        response = SchoolCompetitionSubmissionViewSet.as_view(
+            {'post': 'finalize_promotion'}
+        )(request, pk=submission.pk)
+
+        self.assertEqual(response.status_code, 200, response.data)
+        selected_detail.refresh_from_db()
+        not_selected_detail.refresh_from_db()
+        self.assertEqual(selected_detail.promotion_status, 'promoted')
+        self.assertEqual(not_selected_detail.promotion_status, 'not_promoted')
+        self.assertEqual(selected_detail.raw_score, 80)
+        self.assertEqual(selected_detail.percentage_score, 80)
+        self.assertEqual(not_selected_detail.raw_score, 65)
+        self.assertEqual(not_selected_detail.percentage_score, 65)
 
 
 class ZoneSubmissionFlowTests(TestCase):

@@ -194,6 +194,13 @@ class ResultPromotion(models.Model):
     result_detail = models.ForeignKey('ResultDetail', on_delete=models.CASCADE, null=True, blank=True, related_name='promotions')
     from_level = models.CharField(max_length=20)
     to_level = models.CharField(max_length=20)
+    target_competition = models.ForeignKey(
+        'competitions.Competition',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='source_promotions',
+    )
     promoted_by = models.ForeignKey('core.User', on_delete=models.PROTECT, related_name='result_promotions')
     promoted_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
@@ -202,7 +209,6 @@ class ResultPromotion(models.Model):
         constraints = [
             models.UniqueConstraint(fields=['result_detail', 'to_level'], name='unique_detail_promotion_level'),
         ]
-
 
 class ResultDetail(models.Model):
     """Detailed breakdown of a result (e.g., individual talent component scores)."""
@@ -214,6 +220,15 @@ class ResultDetail(models.Model):
     percentage_score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     passed = models.BooleanField(default=False)
     promoted_to = models.CharField(max_length=20, blank=True)
+    promotion_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('promoted', 'Promoted'),
+            ('not_promoted', 'Not Promoted'),
+        ],
+        default='pending',
+    )
     
     notes = models.TextField(blank=True)
     recorded_at = models.DateTimeField(auto_now_add=True)
@@ -257,5 +272,11 @@ class ResultDetail(models.Model):
 
         score = self.percentage_score if self.percentage_score is not None else self.raw_score
         self.passed = score >= 50
+
+        if score < 50:
+            self.promotion_status = 'not_promoted'
+        elif self.promotion_status == 'not_promoted':
+            self.promotion_status = 'pending'
+
         super().save(*args, **kwargs)
 

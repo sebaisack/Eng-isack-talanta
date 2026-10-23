@@ -26,6 +26,14 @@ class Competition(models.Model):
 
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)
+    venue = models.CharField(max_length=255, blank=True)
+    talent = models.ForeignKey(
+        'core.Talent',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='competitions',
+    )
     level = models.CharField(max_length=20, choices=LEVEL_CHOICES)
     start_date = models.DateField(default=timezone.now)
     end_date = models.DateField(null=True, blank=True)

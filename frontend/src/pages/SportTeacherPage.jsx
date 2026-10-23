@@ -29,6 +29,11 @@ const SportTeacherPage = () => {
   
   // Data states
   const [students, setStudents] = useState([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [studentClassFilter, setStudentClassFilter] = useState('');
+  const [studentTalentFilter, setStudentTalentFilter] = useState('');
+  const [studentClubFilter, setStudentClubFilter] = useState('');
+
   const [studentTalents, setStudentTalents] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [countryClubs, setCountryClubs] = useState([]);
@@ -64,16 +69,19 @@ const SportTeacherPage = () => {
   const [studentForm, setStudentForm] = useState({
     first_name: '', last_name: '', gender: 'M', date_of_birth: '', education_level: '', password: '', confirm_password: '', club: '', talents: []
   });
+  const [studentSubmitting, setStudentSubmitting] = useState(false);
   const [clubMembershipForm, setClubMembershipForm] = useState({ student: '', club: '' });
   const [talentForm, setTalentForm] = useState({ student: '', talent: '', proficiency_level: 1, notes: '' });
   const [clubForm, setClubForm] = useState({ name: '', focus: '', description: '' });
   const [selectedClubIds, setSelectedClubIds] = useState([]);
   const [resultForm, setResultForm] = useState({ student: '', competition: '', score: '', status: 'finished' });
   const [uploadFile, setUploadFile] = useState(null);
-  const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '', expires_at: '' });
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '', published_at: '', expires_at: '' });
   const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
-  const [competitionForm, setCompetitionForm] = useState({ name: '', description: '', start_date: '', end_date: '' });
+  const [competitionForm, setCompetitionForm] = useState({ name: '', description: '', venue: '', talent: '', start_date: '', end_date: '' });
   const [competitionSubmitting, setCompetitionSubmitting] = useState(false);
+  const [selectedCompetitionStudentIds, setSelectedCompetitionStudentIds] = useState([]);
+  const [competitionStudentSearch, setCompetitionStudentSearch] = useState('');
   const [uploading, setUploading] = useState(false);
   const [promoting, setPromoting] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState([]);
@@ -171,14 +179,14 @@ const SportTeacherPage = () => {
         apiService.getAllStudentTalents({ school: schoolId }),
         apiService.getClubs({ school: schoolId }),
         apiService.getClubMemberships({ school: schoolId }),
-        apiService.getCompetitions({ school: schoolId }),
-        apiService.getParticipations({ school: schoolId }),
+        apiService.getAllCompetitions({ school: schoolId }),
+        apiService.getAllParticipations({ school: schoolId }),
         apiService.getAllResults({ school: schoolId }),
         apiService.getAllResultDetails({ school: schoolId }),
         apiService.getAnnouncements({ is_active: true }),
         apiService.getEligibleForPromotion().catch(() => ({ data: [] })),
         apiService.getSchoolById(schoolId),
-        apiService.getSchoolResultSubmissions({ school: schoolId }),
+        apiService.getAllSchoolResultSubmissions({ school: schoolId }),
       ]);
       
       const schoolStudents = (studentsRes.data.results || []).filter((student) => {
@@ -188,7 +196,23 @@ const SportTeacherPage = () => {
       setStudents(schoolStudents);
       const schoolCountryId = schoolRes.data.country?.id ?? schoolRes.data.country_id ?? schoolRes.data.country;
       const countryClubsRes = await apiService.getCountryClubs({ country: schoolCountryId });
-      setEducationLevels((educationLevelsRes.data.results || []).filter((level) => Number(level.country) === Number(schoolCountryId)));
+      // Keep every existing education level and add the three early-childhood
+// levels at the top of the registration dropdown. These entries are
+// display-only and do not remove or replace any backend levels.
+const existingEducationLevels = (educationLevelsRes.data.results || [])
+  .filter((level) => Number(level.country) === Number(schoolCountryId));
+
+const existingNames = new Set(
+  existingEducationLevels.map((level) => String(level.name || '').trim().toLowerCase())
+);
+
+const earlyChildhoodLevels = [
+  { id: 'baby-class', name: 'Baby Class', equivalent_name: 'Nursery 1' },
+  { id: 'middle-class', name: 'Middle Class', equivalent_name: 'Nursery 2' },
+  { id: 'pre-unit-class', name: 'Pre-Unit Class', equivalent_name: 'Nursery 3' },
+].filter((level) => !existingNames.has(level.name.toLowerCase()));
+
+setEducationLevels([...earlyChildhoodLevels, ...existingEducationLevels]);
       setTalents(talentsRes.data.results || []);
       setStudentTalents(studentTalentsRes.data.results || []);
       setClubs(clubsRes.data.results || []);
@@ -221,12 +245,26 @@ const SportTeacherPage = () => {
   }, [schoolId]);
 
   const refreshCompetitionData = useCallback(async () => {
-    const competitionsRes = await apiService.getCompetitions({ school: schoolId });
+    const [
+      competitionsRes,
+      participationsRes,
+      resultsRes,
+      resultDetailsRes,
+    ] = await Promise.all([
+      apiService.getAllCompetitions({ school: schoolId }),
+      apiService.getAllParticipations({ school: schoolId }),
+      apiService.getAllResults({ school: schoolId }),
+      apiService.getAllResultDetails({ school: schoolId }),
+    ]);
+
     setCompetitions(competitionsRes.data.results || []);
+    setParticipations(participationsRes.data.results || []);
+    setResults(resultsRes.data.results || []);
+    setResultDetails(resultDetailsRes.data.results || []);
   }, [schoolId]);
 
   const refreshSchoolSubmissionData = useCallback(async () => {
-    const submissionsRes = await apiService.getSchoolResultSubmissions({ school: schoolId });
+    const submissionsRes = await apiService.getAllSchoolResultSubmissions({ school: schoolId });
     setSchoolSubmissions(submissionsRes.data.results || []);
   }, [schoolId]);
 
@@ -348,7 +386,18 @@ const SportTeacherPage = () => {
   };
   const closeStudentEditor = () => setSelectedStudent(null);
   const handleSaveResult = async (row, scoreOverride) => {
+    console.log('[RESULT DEBUG] handleSaveResult called:', {
+      rowId: row.id,
+      student: row.student,
+      talentId: row.talentId,
+      participation: row.participation,
+      result: row.result,
+      detailId: row.detail?.id,
+      scoreOverride,
+      rowScore: row.score,
+    });
     try {
+      setResultSaveStates((current) => ({ ...current, [row.id]: 'saving' }));
       const rawScore = scoreOverride !== undefined ? scoreOverride : resultScores[row.id] ?? row.score;
       const score = rawScore === '' || rawScore === null ? null : Number(rawScore);
       if (score !== null && (!Number.isFinite(score) || score < 0 || score > 100)) {
@@ -356,12 +405,35 @@ const SportTeacherPage = () => {
         return;
       }
       const isTalentResult = Boolean(row.talentId || row.detail);
-      let participationId = row.participation;
+
+      const getRelatedId = (value) =>
+        Number(value && typeof value === 'object' ? value.id : value);
+
+      const existingParticipation =
+        participations.find(
+          (item) => Number(item.id) === getRelatedId(row.participation)
+        ) ||
+        participations.find(
+          (item) =>
+            getRelatedId(item.student) === getRelatedId(row.student) &&
+            getRelatedId(item.competition) === getRelatedId(row.competitionId)
+        );
+
+      let participationId = existingParticipation?.id || row.participation;
       let participationResponse;
-      if (row.participation) {
-        participationResponse = await apiService.updateParticipation(row.participation, { status: 'finished' });
-      } else if (row.competitionId) {
-        participationResponse = await apiService.createParticipation({ competition: row.competitionId, student: row.student, score: isTalentResult ? null : score, status: 'finished' });
+
+      if (participationId) {
+        participationResponse = await apiService.updateParticipation(
+          participationId,
+          { status: 'finished' }
+        );
+      } else if (row.competitionId && row.student) {
+        participationResponse = await apiService.createParticipation({
+          competition: row.competitionId,
+          student: row.student,
+          score: isTalentResult ? null : score,
+          status: 'finished',
+        });
         participationId = participationResponse.data.id;
       } else {
         setError('No school-level competition is available for this school.');
@@ -376,11 +448,11 @@ const SportTeacherPage = () => {
       let resultId = row.result;
       let resultResponse;
       if (!resultId) {
-        resultResponse = await apiService.createResult({ participation: participationId, score: isTalentResult ? null : score, award: 'none' });
+        resultResponse = await apiService.createResult({ participation: participationId, score, award: 'none' });
         resultId = resultResponse.data.id;
         setResults((current) => [...current, resultResponse.data]);
-      } else if (!isTalentResult && score !== null) {
-        resultResponse = await apiService.updateResult(resultId, { score });
+      } else if (score !== null) {
+        resultResponse = await apiService.updateResult(resultId, { score, award: 'none' });
         setResults((current) => current.map((item) => Number(item.id) === Number(resultId) ? resultResponse.data : item));
       }
       if (row.detail) {
@@ -404,18 +476,6 @@ const SportTeacherPage = () => {
       setResultSaveStates((current) => ({ ...current, [row.id]: 'failed' }));
       setError(err.response?.data?.detail || err.response?.data?.non_field_errors?.[0] || 'Failed to save result');
     }
-  };
-
-  const scheduleResultAutosave = (row, value) => {
-    const existingTimer = resultAutosaveTimers.current.get(row.id);
-    if (existingTimer) window.clearTimeout(existingTimer);
-    setResultSaveStates((current) => ({ ...current, [row.id]: 'pending' }));
-    const timer = window.setTimeout(() => {
-      setResultSaveStates((current) => ({ ...current, [row.id]: 'saving' }));
-      handleSaveResult(row, value);
-      resultAutosaveTimers.current.delete(row.id);
-    }, 900);
-    resultAutosaveTimers.current.set(row.id, timer);
   };
 
   const getGradeForScore = (score) => {
@@ -521,6 +581,7 @@ const SportTeacherPage = () => {
         content: announcementForm.content.trim(),
         scope: 'school',
         school: schoolId,
+        published_at: announcementForm.published_at || null,
         expires_at: announcementForm.expires_at || null,
       };
       if (selectedAnnouncement) {
@@ -563,7 +624,8 @@ const SportTeacherPage = () => {
     setAnnouncementForm({
       title: announcement.title || '',
       content: announcement.content || '',
-      expires_at: announcement.expires_at ? announcement.expires_at.slice(0, 10) : '',
+      published_at: announcement.published_at ? announcement.published_at.slice(0, 16) : '',
+      expires_at: announcement.expires_at ? announcement.expires_at.slice(0, 16) : '',
     });
     openModal('createAnnouncement');
   };
@@ -573,24 +635,53 @@ const SportTeacherPage = () => {
     setCompetitionForm({
       name: competition?.name || '',
       description: competition?.description || '',
+      venue: competition?.venue || '',
+      talent: competition?.talent == null ? '' : String(typeof competition.talent === 'object' ? competition.talent.id : competition.talent),
       start_date: competition?.start_date || '',
       end_date: competition?.end_date || '',
     });
+
+    const currentParticipants = Array.isArray(competition?.participants)
+      ? competition.participants
+      : [];
+
+    setSelectedCompetitionStudentIds(
+      currentParticipants
+        .map((participant) =>
+          String(
+            typeof participant === 'object' && participant !== null
+              ? participant.id
+              : participant
+          )
+        )
+        .filter((id) => id && id !== 'undefined' && id !== 'null')
+    );
+
+    setCompetitionStudentSearch('');
     openModal('competition');
   };
 
   const handleSaveCompetition = async (event) => {
     event.preventDefault();
-    setCompetitionSubmitting(true);
     setError(null);
+
+    if (selectedCompetitionStudentIds.length === 0) {
+      setError('Select at least one student who will participate in this competition.');
+      return;
+    }
+
+    setCompetitionSubmitting(true);
     try {
       const payload = {
         name: competitionForm.name.trim(),
         description: competitionForm.description.trim(),
+        venue: competitionForm.venue.trim(),
+        talent: competitionForm.talent ? Number(competitionForm.talent) : null,
         start_date: competitionForm.start_date,
         end_date: competitionForm.end_date || null,
         level: 'school',
         schools: [schoolId],
+        participants: selectedCompetitionStudentIds.map(Number),
       };
       if (selectedCompetition) {
         await apiService.patchCompetition(selectedCompetition.id, payload);
@@ -599,7 +690,9 @@ const SportTeacherPage = () => {
       }
       closeModal('competition');
       setSelectedCompetition(null);
-      setCompetitionForm({ name: '', description: '', start_date: '', end_date: '' });
+      setCompetitionForm({ name: '', description: '', venue: '', talent: '', start_date: '', end_date: '' });
+      setSelectedCompetitionStudentIds([]);
+      setCompetitionStudentSearch('');
       await refreshCompetitionData();
       showSuccess(selectedCompetition ? 'Competition updated successfully' : 'Competition created successfully');
     } catch (err) {
@@ -629,33 +722,114 @@ const SportTeacherPage = () => {
   const clubLimit = students.length <= 200 ? 3 : students.length < 500 ? 5 : 10;
 
   // Register Student
-  const handleRegisterStudent = async (e) => {
-    e.preventDefault();
-    if (studentForm.password !== studentForm.confirm_password) {
-      setError('Passwords do not match.');
-      return;
-    }
+const handleRegisterStudent = async (e) => {
+  e.preventDefault();
+  setError(null);
+
+  if (studentSubmitting) return;
+
+  if (!studentForm.first_name.trim() || !studentForm.last_name.trim()) {
+    setError('First name and last name are required.');
+    return;
+  }
+
+  if (studentForm.password.length < 8) {
+    setError('Password must be at least 8 characters long.');
+    return;
+  }
+
+  if (studentForm.password !== studentForm.confirm_password) {
+    setError('Passwords do not match.');
+    return;
+  }
+
+  setStudentSubmitting(true);
+
+  try {
+    const registrationResponse = await apiService.registerStudent({
+      first_name: studentForm.first_name.trim(),
+      last_name: studentForm.last_name.trim(),
+      gender: studentForm.gender,
+      education_level_id: studentForm.education_level || null,
+      date_of_birth: studentForm.date_of_birth || null,
+      school_id: schoolId,
+      password: studentForm.password,
+      club: studentForm.club ? Number(studentForm.club) : null,
+      talents: studentForm.talents.map((talentId) => Number(talentId)),
+    });
+
+    const createdUsername =
+      registrationResponse?.data?.username ||
+      registrationResponse?.data?.student_id ||
+      '';
+
+    setStudentForm({
+      first_name: '',
+      last_name: '',
+      gender: 'M',
+      date_of_birth: '',
+      education_level: '',
+      password: '',
+      confirm_password: '',
+      club: '',
+      talents: [],
+    });
+
+    closeModal('registerStudent');
+    setActiveTab('students');
+
+    let refreshFailed = false;
     try {
-      await apiService.registerStudent({
-        first_name: studentForm.first_name,
-        last_name: studentForm.last_name,
-        gender: studentForm.gender,
-        education_level_id: studentForm.education_level || null,
-        date_of_birth: studentForm.date_of_birth || null,
-        school_id: schoolId,
-        password: studentForm.password,
-        club: studentForm.club ? Number(studentForm.club) : null,
-        talents: studentForm.talents.map((talentId) => Number(talentId)),
-      });
-      setStudentForm({ first_name: '', last_name: '', gender: 'M', date_of_birth: '', education_level: '', password: '', confirm_password: '', club: '', talents: [] });
-      closeModal('registerStudent');
-      setActiveTab('students');
       await refreshStudentData();
-      showSuccess('Student registered successfully');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to register student');
+    } catch (refreshError) {
+      console.error(
+        'Student was registered, but refreshing the student list failed:',
+        refreshError
+      );
+      refreshFailed = true;
     }
-  };
+
+    let successMessage = createdUsername
+      ? `Student registered successfully. Login username: ${createdUsername}. Use the password you entered during registration.`
+      : 'Student registered successfully';
+
+    if (refreshFailed) {
+      successMessage += ' The student was saved, but the list could not refresh. Reload the page to see the new record.';
+    }
+
+    showSuccess(successMessage);
+  } catch (err) {
+    const responseData = err.response?.data;
+
+    const fieldErrors =
+      responseData && typeof responseData === 'object'
+        ? Object.entries(responseData)
+            .filter(([key]) => key !== 'detail' && key !== 'non_field_errors')
+            .map(([field, value]) => {
+              const message = Array.isArray(value)
+                ? value.join(' ')
+                : typeof value === 'string'
+                  ? value
+                  : '';
+              return message ? `${field.replace(/_/g, ' ')}: ${message}` : '';
+            })
+            .filter(Boolean)
+            .join(' ')
+        : '';
+
+    const errorMessage =
+      responseData?.detail ||
+      responseData?.non_field_errors?.[0] ||
+      fieldErrors ||
+      (typeof responseData === 'string' ? responseData : '') ||
+      err.message ||
+      'Failed to register student.';
+
+    setError(errorMessage);
+  } finally {
+    setStudentSubmitting(false);
+  }
+};
 
   // Assign Talent
   const handleAssignTalent = async (e) => {
@@ -859,10 +1033,37 @@ const SportTeacherPage = () => {
     return scopeIds[announcement.scope] || false;
   });
 
-  const getStudentTalentNames = (studentId) => {
-    const talents = studentTalents.filter((entry) => Number(entry.student) === Number(studentId));
-    return talents.map(t => t.talent_name || 'Talent').join(', ') || 'None';
+  const getStudentTalentNames = (studentId, talentId = null) => {
+    return studentTalents
+      .filter((entry) =>
+        Number(entry.student) === Number(studentId) &&
+        (talentId == null || talentId === '' ||
+          Number(entry.talent) === Number(talentId))
+      )
+      .map((entry) => entry.talent_name || 'Talent')
+      .join(', ');
   };
+
+  const filteredCompetitionStudents = competitionForm.talent
+    ? students.filter((student) => {
+        const hasSelectedTalent = studentTalents.some(
+          (entry) =>
+            Number(entry.student) === Number(student.id) &&
+            Number(entry.talent) === Number(competitionForm.talent)
+        );
+
+        if (!hasSelectedTalent) return false;
+
+        const query = competitionStudentSearch.trim().toLowerCase();
+        if (!query) return true;
+
+        const name = `${student.first_name || ''} ${student.last_name || ''}`.toLowerCase();
+        const studentId = String(student.student_id || '').toLowerCase();
+        const talents = getStudentTalentNames(student.id, competitionForm.talent).toLowerCase();
+
+        return name.includes(query) || studentId.includes(query) || talents.includes(query);
+      })
+    : [];
 
   const getStudentClub = (studentId) => {
     const membership = clubMemberships.find(m => m.student === studentId && m.is_active);
@@ -966,6 +1167,7 @@ const SportTeacherPage = () => {
     { key: 'talents', label: 'Clubs & Talents' },
     { key: 'students', label: 'Students' },
     { key: 'results', label: 'Results' },
+    { key: 'submitted-competitions', label: 'All Competitions' },
     { key: 'announcements', label: 'Announcements' },
   ];
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -1036,6 +1238,8 @@ const SportTeacherPage = () => {
         return renderClubsAndTalents();
       case 'results':
         return renderResults();
+      case 'submitted-competitions':
+        return renderSubmittedCompetitions();
       case 'announcements':
         return renderAnnouncements();
       case 'upload':
@@ -1249,6 +1453,34 @@ const SportTeacherPage = () => {
     );
   };
 
+  const studentClassOptions = [...new Set(
+    students.map((student) => getStudentEducationLevel(student)).filter((v) => v && v !== '—')
+  )].sort();
+
+  const studentTalentOptions = [...new Set(
+    studentTalents
+      .filter((entry) => students.some((student) => Number(student.id) === Number(entry.student)))
+      .map((entry) => entry.talent_name || 'Talent')
+  )].sort();
+
+  const studentClubOptions = [...new Set(
+    students.map((student) => getStudentClub(student.id)).filter((v) => v && v !== 'Not assigned')
+  )].sort();
+
+  const filteredStudents = students.filter((student) => {
+    const query = studentSearchQuery.trim().toLowerCase();
+    const username = String(student.username || student.user?.username || '').toLowerCase();
+    const studentId = String(student.student_id || '').toLowerCase();
+    const fullName = `${student.first_name || ''} ${student.last_name || ''}`.toLowerCase();
+
+    return (
+      (!query || username.includes(query) || studentId.includes(query) || fullName.includes(query)) &&
+      (!studentClassFilter || getStudentEducationLevel(student) === studentClassFilter) &&
+      (!studentTalentFilter || getStudentTalentNames(student.id).split(', ').includes(studentTalentFilter)) &&
+      (!studentClubFilter || getStudentClub(student.id) === studentClubFilter)
+    );
+  });
+
   // STUDENTS VIEW
   const renderStudents = () => (
     <div style={{ background: 'white', borderRadius: '8px', border: '1px solid #e5e7eb', overflow: 'hidden' }}>
@@ -1265,6 +1497,37 @@ const SportTeacherPage = () => {
           + Register Student
         </button>
       </div>
+      <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '12px', borderBottom: '1px solid #e5e7eb' }}>
+        <input type="search" value={studentSearchQuery}
+          onChange={(event) => setStudentSearchQuery(event.target.value)}
+          placeholder="Search username, Student ID or name..."
+          aria-label="Search students"
+          style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', width: '100%', boxSizing: 'border-box' }}
+        />
+        <select value={studentClassFilter} onChange={(event) => setStudentClassFilter(event.target.value)} aria-label="Filter by class" style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+          <option value="">All classes</option>
+          {studentClassOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+        <select value={studentTalentFilter} onChange={(event) => setStudentTalentFilter(event.target.value)} aria-label="Filter by talent" style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+          <option value="">All talents</option>
+          {studentTalentOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+        <select value={studentClubFilter} onChange={(event) => setStudentClubFilter(event.target.value)} aria-label="Filter by club" style={{ padding: '10px', border: '1px solid #d1d5db', borderRadius: '6px' }}>
+          <option value="">All clubs</option>
+          {studentClubOptions.map((v) => <option key={v} value={v}>{v}</option>)}
+        </select>
+        <button type="button" onClick={() => {
+          setStudentSearchQuery('');
+          setStudentClassFilter('');
+          setStudentTalentFilter('');
+          setStudentClubFilter('');
+        }} style={{ padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', background: 'white', cursor: 'pointer' }}>
+          Clear Filters
+        </button>
+        <span style={{ alignSelf: 'center', color: '#6b7280', fontSize: '13px' }}>
+          Showing {filteredStudents.length} of {students.length} students
+        </span>
+      </div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
           <thead>
@@ -1277,7 +1540,7 @@ const SportTeacherPage = () => {
             </tr>
           </thead>
           <tbody>
-            {students.map((student) => (
+            {filteredStudents.map((student) => (
               <tr key={student.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: '10px 16px' }}>
                   <button type="button" className="sport-teacher-student-id-link" onClick={() => openStudentEditor(student)}>{student.student_id || '—'}</button>
@@ -1292,8 +1555,8 @@ const SportTeacherPage = () => {
                 </td>
               </tr>
             ))}
-            {students.length === 0 && (
-              <tr><td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: '#9ca3af' }}>No students registered</td></tr>
+            {filteredStudents.length === 0 && (
+              <tr><td colSpan="5" style={{ padding: '30px', textAlign: 'center', color: '#9ca3af' }}>{students.length === 0 ? 'No students registered' : 'No students match your search or filters.'}</td></tr>
             )}
           </tbody>
         </table>
@@ -1454,11 +1717,49 @@ const SportTeacherPage = () => {
     return competition.level === 'school' && competitionSchools.includes(Number(schoolId));
   });
   const schoolCompetition = schoolCompetitions[0];
-  const schoolResultRows = schoolCompetitions.flatMap((competition) => students.flatMap((student) => {
+  const schoolResultRows = schoolCompetitions.flatMap((competition) => {
+    const participantIds = new Set(
+      (Array.isArray(competition.participants) ? competition.participants : [])
+        .map((participant) =>
+          Number(
+            typeof participant === 'object' && participant !== null
+              ? participant.id
+              : participant
+          )
+        )
+        .filter(Number.isFinite)
+    );
+
+    const participatingStudents = students.filter((student) =>
+      participantIds.has(Number(student.id))
+    );
+
+    return participatingStudents.flatMap((student) => {
     const participation = participations.find((item) => Number(item.student) === Number(student.id) && Number(item.competition) === Number(competition.id));
     const result = participation ? resultByParticipation.get(Number(participation.id)) : null;
-    const studentTalentEntries = studentTalents.filter((entry) => Number(entry.student) === Number(student.id));
-    const talentRows = studentTalentEntries.length ? studentTalentEntries : [{ id: `no-talent-${student.id}`, talent_name: 'None' }];
+    const selectedTalentId = competition.talent == null
+      ? null
+      : Number(typeof competition.talent === 'object'
+        ? competition.talent.id
+        : competition.talent);
+
+    const studentTalentEntries = studentTalents.filter((entry) => {
+      if (Number(entry.student) !== Number(student.id)) return false;
+      if (selectedTalentId === null || !Number.isFinite(selectedTalentId)) return true;
+
+      const entryTalentId = Number(
+        typeof entry.talent === 'object' && entry.talent !== null
+          ? entry.talent.id
+          : entry.talent
+      );
+      return entryTalentId === selectedTalentId;
+    });
+
+    const talentRows = selectedTalentId !== null
+      ? studentTalentEntries
+      : studentTalentEntries.length
+        ? studentTalentEntries
+        : [{ id: `no-talent-${student.id}`, talent_name: 'None' }];
     return talentRows.map((talentEntry) => {
       const detail = resultDetails.find((entry) => Number(entry.talent) === Number(talentEntry.id) && result && Number(entry.result) === Number(result.id));
       return {
@@ -1479,17 +1780,8 @@ const SportTeacherPage = () => {
         status: detail ? (detail.passed ? 'finished' : 'registered') : (participation?.status || 'registered'),
       };
     });
-  }));
-
-  const higherLevelCompetitions = ['district', 'zone', 'country'].flatMap((level) => competitions
-    .filter((competition) => {
-      const competitionSchools = (competition.schools || []).map((id) => Number(id));
-      return competition.level === level && competitionSchools.includes(Number(schoolId));
-    })
-    .map((competition) => ({
-      ...competition,
-      resultRows: results.filter((result) => Number(result.competition) === Number(competition.id) || result.competition_name === competition.name),
-    })));
+    });
+  });
 
   const handleSubmitSchoolResults = async (competition = schoolCompetition) => {
     if (!competition) {
@@ -1516,20 +1808,25 @@ const SportTeacherPage = () => {
   };
 
   const renderResults = () => {
-    const schoolRowsByCompetition = schoolResultRows.reduce((groups, row) => {
-      const competitionId = row.competitionId || schoolCompetition?.id || 'school';
-      const competitionName = row.competition || schoolCompetition?.name || 'School competition';
-      const sourceCompetition = competitions.find((item) => Number(item.id) === Number(competitionId));
-      const group = groups[competitionId] || {
-        id: Number(competitionId),
-        name: competitionName,
-        status: sourceCompetition?.status || 'draft',
-        rows: [],
-      };
-      group.rows.push(row);
-      groups[competitionId] = group;
-      return groups;
-    }, {});
+    const schoolRowsByCompetition = schoolCompetitions
+      .filter((competition) => {
+        const submission = schoolSubmissions.find(
+          (item) => Number(item.competition) === Number(competition.id)
+        );
+        return !['submitted', 'approved'].includes(submission?.status);
+      })
+      .reduce((groups, sourceCompetition) => {
+        const competitionId = Number(sourceCompetition.id);
+        groups[competitionId] = {
+          id: competitionId,
+          name: sourceCompetition.name || 'School competition',
+          status: sourceCompetition.status || 'draft',
+          rows: schoolResultRows.filter(
+            (row) => Number(row.competitionId) === competitionId
+          ),
+        };
+        return groups;
+      }, {});
 
     return (
     <div className="sport-teacher-results-stack">
@@ -1541,34 +1838,204 @@ const SportTeacherPage = () => {
             const canSubmit = !isLocked && ['draft', 'approved'].includes(competition.status);
             return (
           <div className="sport-teacher-results-card-header">
-            <div><h2>{competition.name}</h2><p>{isLocked ? 'Submitted and locked for district review.' : canSubmit ? 'Results for all students in your school.' : `Competition status: ${competition.status || 'draft'}. Submission is unavailable.`}</p></div>
+            <div><h2>{competition.name}</h2><p>{isLocked ? 'Submitted and locked for district review.' : canSubmit ? 'Results for selected competition participants.' : `Competition status: ${competition.status || 'draft'}. Submission is unavailable.`}</p></div>
             {canSubmit && <button type="button" onClick={() => handleSubmitSchoolResults(competition)} style={{ ...actionBtnStyle, background: '#0E1DB6', color: 'white' }}>Submit results</button>}
           </div>
             );
           })()}
           <div className="sport-teacher-results-table-wrap">
             <table className="sport-teacher-results-table"><thead><tr><th>Student</th><th>Talent</th><th>Score</th><th>Grade</th><th>Status</th></tr></thead><tbody>
-              {competition.rows.map((row) => { const saveState = resultSaveStates[row.id]; const currentScore = resultScores[row.id] ?? row.score ?? ''; return <tr key={row.id}><td>{getStudentName(row.student)}</td><td>{row.talent}</td><td><span className="sport-teacher-score-editor"><input className="sport-teacher-inline-score" type="number" min="0" max="100" step="0.01" value={currentScore} disabled={schoolSubmissions.find((submission) => Number(submission.competition) === Number(competitionId))?.status === 'submitted' || schoolSubmissions.find((submission) => Number(submission.competition) === Number(competitionId))?.status === 'approved'} onChange={(event) => { const value = event.target.value === '' ? '' : Math.min(100, Math.max(0, Number(event.target.value))); setResultScores((current) => ({ ...current, [row.id]: value })); scheduleResultAutosave(row, value); }} aria-label={`Score for ${getStudentName(row.student)} ${row.talent}`} /></span></td><td className="sport-teacher-inline-grade">{saveState === 'pending' || saveState === 'saving' ? <span className="sport-teacher-save-spinner" aria-label="Saving result" /> : getGradeForScore(currentScore)}</td><td>{getStatusBadge(row.status, currentScore, row.hasScore)}</td></tr>; })}
+              {competition.rows.map((row) => { const saveState = resultSaveStates[row.id]; const currentScore = resultScores[row.id] ?? row.score ?? ''; return <tr key={row.id}><td>{getStudentName(row.student)}</td><td>{row.talent}</td><td><span className="sport-teacher-score-editor"><input className="sport-teacher-inline-score" type="number" min="0" max="100" step="0.01" value={currentScore} disabled={schoolSubmissions.find((submission) => Number(submission.competition) === Number(competitionId))?.status === 'submitted' || schoolSubmissions.find((submission) => Number(submission.competition) === Number(competitionId))?.status === 'approved'} onChange={(event) => { const value = event.target.value === '' ? '' : Math.min(100, Math.max(0, Number(event.target.value))); setResultScores((current) => ({ ...current, [row.id]: value })); }} onBlur={(event) => handleSaveResult(row, event.currentTarget.value)} aria-label={`Score for ${getStudentName(row.student)} ${row.talent}`} /></span></td><td className="sport-teacher-inline-grade">{saveState === 'pending' || saveState === 'saving' ? <span className="sport-teacher-save-spinner" aria-label="Saving result" /> : getGradeForScore(currentScore)}</td><td>{getStatusBadge(row.status, currentScore, row.hasScore)}</td></tr>; })}
+              {!competition.rows.length && (
+                <tr>
+                  <td colSpan="5" className="sport-teacher-results-empty">
+                    No students registered yet.
+                  </td>
+                </tr>
+              )}
             </tbody></table>
           </div>
         </section>
       ))}
-      {!Object.keys(schoolRowsByCompetition).length && (
+      {!Object.keys(schoolRowsByCompetition).length && schoolCompetitions.length === 0 && (
         <section className="sport-teacher-results-card">
-          <div className="sport-teacher-results-card-header"><div><h2>{schoolCompetition?.name || 'School competition'}</h2><p>Results for all students in your school.</p></div></div>
-          <p className="sport-teacher-results-empty">No students registered.</p>
+          <div className="sport-teacher-results-card-header">
+            <div>
+              <h2>School Results</h2>
+              <p>No school competitions are currently available for result entry.</p>
+            </div>
+          </div>
+          <p className="sport-teacher-results-empty">
+            There are no competitions awaiting results.
+          </p>
         </section>
       )}
-      {higherLevelCompetitions.map((competition) => (
-        <section className="sport-teacher-results-card" key={competition.id}>
-          <div className="sport-teacher-results-card-header"><div><h2>{competition.name}</h2><p>Read-only results for students promoted from your school.</p></div><span className="sport-teacher-read-only-badge">Read only</span></div>
-          <div className="sport-teacher-results-table-wrap"><table className="sport-teacher-results-table"><thead><tr><th>Student</th><th>Score</th><th>Grade</th><th>Rank</th></tr></thead><tbody>
-            {competition.resultRows.map((result) => <tr key={result.id}><td>{result.student_name}</td><td><strong>{result.score === null || result.score === undefined ? 'Not recorded' : `${result.score}%`}</strong></td><td>{result.grade || '—'}</td><td>{result.rank ?? '—'}</td></tr>)}
-            {!competition.resultRows.length && <tr><td colSpan="4" className="sport-teacher-results-empty">No results available yet.</td></tr>}
-          </tbody></table></div>
-        </section>
-      ))}
     </div>
+    );
+  };
+
+  // ALL COMPETITIONS: display saved results without modifying them.
+  const renderSubmittedCompetitions = () => {
+    const submittedCompetitions = schoolSubmissions
+      .filter((submission) =>
+        ["submitted", "approved", "rejected"].includes(submission.status)
+      )
+      .sort((a, b) => {
+        const dateA = a.submitted_at ? new Date(a.submitted_at).getTime() : 0;
+        const dateB = b.submitted_at ? new Date(b.submitted_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+    return (
+      <div className="sport-teacher-results-stack">
+        <section className="sport-teacher-results-card">
+          <div className="sport-teacher-results-card-header">
+            <div>
+              <h2>All Competitions</h2>
+              <p>Submitted school results, including their saved scores and review status.</p>
+            </div>
+          </div>
+
+          {submittedCompetitions.length ? submittedCompetitions.map((submission) => {
+            const competition = competitions.find(
+              (item) => Number(item.id) === Number(submission.competition)
+            );
+            const rows = schoolResultRows.filter(
+              (row) => Number(row.competitionId) === Number(submission.competition)
+            );
+
+            const submissionLabel = submission.status === "approved"
+              ? "Approved"
+              : submission.status === "rejected"
+                ? "Rejected"
+                : "Submitted";
+
+            return (
+              <div key={submission.id} style={{ marginBottom: "24px" }}>
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: "12px",
+                  flexWrap: "wrap",
+                  padding: "12px 0"
+                }}>
+                  <div>
+                    <h3 style={{ margin: "0 0 4px" }}>
+                      {competition?.name || `Competition #${submission.competition}`}
+                    </h3>
+                    <p style={{ margin: 0, color: "#6b7280", fontSize: "13px" }}>
+                      Level: {competition?.level || "School"}
+                      {" · "}
+                      Submitted: {submission.submitted_at
+                        ? new Date(submission.submitted_at).toLocaleString()
+                        : "Date unavailable"}
+                    </p>
+                  </div>
+                  <span className="sport-teacher-read-only-badge">
+                    {submissionLabel}
+                  </span>
+                </div>
+
+                <div className="sport-teacher-results-table-wrap">
+                  <table className="sport-teacher-results-table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Student ID</th>
+                        <th>Talent</th>
+                        <th>Score</th>
+                        <th>Grade</th>
+                        <th>Result Status</th>
+                        <th>Award</th>
+                        <th>Remark</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => {
+                        const student = students.find(
+                          (item) => Number(item.id) === Number(row.student)
+                        );
+                        const resultRecord = results.find(
+                          (item) => Number(item.id) === Number(row.result)
+                        );
+                        const detail = row.detail;
+
+                        return (
+                          <tr key={row.id}>
+                            <td>{detail?.student_name || getStudentName(row.student)}</td>
+                            <td>
+                              {detail?.student_username ||
+                                student?.student_id ||
+                                student?.username ||
+                                "—"}
+                            </td>
+                            <td>{detail?.talent_name || row.talent || "—"}</td>
+                            <td>
+                              {row.score === null || row.score === undefined
+                                ? "Not recorded"
+                                : `${row.score}%`}
+                            </td>
+                            <td>
+                              {resultRecord?.grade || getGradeForScore(row.score) || "—"}
+                            </td>
+                            <td>
+                              {(() => {
+                                const status = Number(row.score) < 50
+                                  ? "Fail"
+                                  : detail?.promotion_status === "promoted"
+                                    ? "Promoted"
+                                    : detail?.promotion_status === "not_promoted"
+                                      ? "Not Promoted"
+                                      : detail?.status || row.status || "Pending";
+
+                                const statusClass = status.toLowerCase() === "promoted"
+                                  ? "badge-success"
+                                  : status.toLowerCase() === "not promoted" || status.toLowerCase() === "fail" || status.toLowerCase() === "failed"
+                                    ? "badge-danger"
+                                    : status.toLowerCase() === "pending"
+                                      ? "badge-pending"
+                                      : "badge-secondary";
+
+                                return <span className={`badge ${statusClass}`}>{status}</span>;
+                              })()}
+                            </td>
+                            <td>
+                              {(() => {
+                                const award = detail?.award_status || "—";
+                                const normalizedAward = String(award).toLowerCase();
+                                const awardClass = normalizedAward === "awarded"
+                                  ? "badge-success"
+                                  : normalizedAward === "none" || normalizedAward === "not awarded"
+                                    ? "badge-secondary"
+                                    : "badge-pending";
+
+                                return <span className={`badge ${awardClass}`}>{award}</span>;
+                              })()}
+                            </td>
+                            <td>{detail?.remark ?? "—"}</td>
+                          </tr>
+                        );
+                      })}
+                      {!rows.length && (
+                        <tr>
+                          <td colSpan="8" className="sport-teacher-results-empty">
+                            No saved result rows found for this competition.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          }) : (
+            <p className="sport-teacher-results-empty">
+              No submitted competitions found.
+            </p>
+          )}
+        </section>
+      </div>
     );
   };
 
@@ -1710,7 +2177,7 @@ const SportTeacherPage = () => {
         <form onSubmit={handleRegisterStudent}>
           <div className="sport-teacher-registration-form-grid">
             <label>First Name *<input type="text" value={studentForm.first_name} placeholder="e.g. John" onChange={(event) => setStudentForm({ ...studentForm, first_name: event.target.value })} required /></label>
-            <label>Last Name *<input type="text" value={studentForm.last_name} placeholder="e.g. Nyerere" onChange={(event) => setStudentForm({ ...studentForm, last_name: event.target.value })} required /></label>
+            <label>Last Name *<input type="text" value={studentForm.last_name} placeholder="e.g. Lipingu" onChange={(event) => setStudentForm({ ...studentForm, last_name: event.target.value })} required /></label>
             <label>Gender *<select value={studentForm.gender} onChange={(event) => setStudentForm({ ...studentForm, gender: event.target.value })} required><option value="M">Male</option><option value="F">Female</option></select></label>
             <label>Date of Birth<input type="date" value={studentForm.date_of_birth} placeholder="YYYY-MM-DD" onChange={(event) => setStudentForm({ ...studentForm, date_of_birth: event.target.value })} /></label>
           </div>
@@ -1719,8 +2186,8 @@ const SportTeacherPage = () => {
             <label>Assign school club <select value={studentForm.club} onChange={(event) => setStudentForm({ ...studentForm, club: event.target.value })} disabled={!registrationClubs.length}><option value="">{registrationClubs.length ? 'No club' : 'No club registered for this school'}</option>{registrationClubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}</select></label>
           </div>
           <div className="sport-teacher-registration-form-grid sport-teacher-registration-password-row">
-            <label>Password *<span className="sport-teacher-password-control"><input type={showRegistrationPassword ? 'text' : 'password'} value={studentForm.password} placeholder="Min 8 characters" onChange={(event) => setStudentForm({ ...studentForm, password: event.target.value })} minLength="8" required /><button type="button" onClick={() => setShowRegistrationPassword((visible) => !visible)} aria-label={showRegistrationPassword ? 'Hide password' : 'Show password'}><EyeIcon visible={showRegistrationPassword} /></button></span></label>
-            <label>Confirm Password *<span className="sport-teacher-password-control"><input type={showRegistrationConfirmation ? 'text' : 'password'} value={studentForm.confirm_password} placeholder="Re-enter password" onChange={(event) => setStudentForm({ ...studentForm, confirm_password: event.target.value })} minLength="8" required /><button type="button" onClick={() => setShowRegistrationConfirmation((visible) => !visible)} aria-label={showRegistrationConfirmation ? 'Hide password confirmation' : 'Show password confirmation'}><EyeIcon visible={showRegistrationConfirmation} /></button></span></label>
+            <label>Password *<span className="sport-teacher-password-control"><input type={showRegistrationPassword ? 'text' : 'password'} value={studentForm.password} placeholder="" onChange={(event) => setStudentForm({ ...studentForm, password: event.target.value })} minLength="8" required /><button type="button" onClick={() => setShowRegistrationPassword((visible) => !visible)} aria-label={showRegistrationPassword ? 'Hide password' : 'Show password'}><EyeIcon visible={showRegistrationPassword} /></button></span></label>
+            <label>Confirm Password *<span className="sport-teacher-password-control"><input type={showRegistrationConfirmation ? 'text' : 'password'} value={studentForm.confirm_password} placeholder="" onChange={(event) => setStudentForm({ ...studentForm, confirm_password: event.target.value })} minLength="8" required /><button type="button" onClick={() => setShowRegistrationConfirmation((visible) => !visible)} aria-label={showRegistrationConfirmation ? 'Hide password confirmation' : 'Show password confirmation'}><EyeIcon visible={showRegistrationConfirmation} /></button></span></label>
           </div>
           <fieldset className="sport-teacher-registration-talents">
             <legend>Assign talents <span className="sport-teacher-optional-label">Optional</span></legend>
@@ -1820,7 +2287,10 @@ const SportTeacherPage = () => {
             <label>Title *<input type="text" value={announcementForm.title} placeholder="e.g. School sports meeting" onChange={(event) => setAnnouncementForm({ ...announcementForm, title: event.target.value })} maxLength="200" required /></label>
             <label>Message *<textarea value={announcementForm.content} placeholder="Type the announcement details here..." onChange={(event) => setAnnouncementForm({ ...announcementForm, content: event.target.value })} rows="7" required /></label>
             <div className="sport-teacher-announcement-form-actions">
-              <label>Expires on (optional)<input type="date" value={announcementForm.expires_at} onChange={(event) => setAnnouncementForm({ ...announcementForm, expires_at: event.target.value })} /></label>
+              <div className="announcement-date-fields">
+              <div className="announcement-date-field"><label>Starting date and time *<input type="datetime-local" value={announcementForm.published_at || ""} onChange={(event) => setAnnouncementForm({ ...announcementForm, published_at: event.target.value })} required /></label></div>
+              <div className="announcement-date-field"><label>Expire date and time *<input type="datetime-local" value={announcementForm.expires_at || ""} min={announcementForm.published_at || undefined} onChange={(event) => setAnnouncementForm({ ...announcementForm, expires_at: event.target.value })} required /></label></div>
+              </div>
               {selectedAnnouncement && <button type="button" className="sport-teacher-announcement-delete" onClick={handleDeleteAnnouncement} disabled={announcementSubmitting}>Delete</button>}
               <button type="submit" disabled={announcementSubmitting}>{announcementSubmitting ? 'Publishing...' : 'Publish'}</button>
             </div>
@@ -1841,11 +2311,172 @@ const SportTeacherPage = () => {
         </div>
         <form onSubmit={handleSaveCompetition} className="sport-teacher-profile-form">
           <label>School competition name *<input type="text" value={competitionForm.name} placeholder="e.g. 2026 Annual School Talent Competition" onChange={(event) => setCompetitionForm({ ...competitionForm, name: event.target.value })} maxLength="150" required /></label>
-          <label>Description<textarea value={competitionForm.description} placeholder="Describe the school-level competition, activities, or eligibility details" onChange={(event) => setCompetitionForm({ ...competitionForm, description: event.target.value })} rows="4" /></label>
+          <label>Competition Description<textarea value={competitionForm.description} placeholder="Describe the school-level competition, activities, or eligibility details" onChange={(event) => setCompetitionForm({ ...competitionForm, description: event.target.value })} rows="4" /></label>
+          <label>Competition Venue<input type="text" value={competitionForm.venue} placeholder="Enter the competition venue" onChange={(event) => setCompetitionForm({ ...competitionForm, venue: event.target.value })} maxLength="255" /></label>
+          <label>Competition Talent *
+            <select
+              value={competitionForm.talent}
+              onChange={(event) => {
+                const talentId = event.target.value;
+                setCompetitionForm({ ...competitionForm, talent: talentId });
+                const eligibleIds = studentTalents
+                  .filter((entry) => Number(entry.talent) === Number(talentId))
+                  .map((entry) => String(entry.student));
+                setSelectedCompetitionStudentIds((current) =>
+                  current.filter((id) => eligibleIds.includes(String(id)))
+                );
+              }}
+              required
+            >
+              <option value="">Select one talent</option>
+              {[...new Map(
+                studentTalents
+                  .filter((entry) => entry.talent != null)
+                  .map((entry) => [
+                    String(entry.talent),
+                    { id: entry.talent, name: entry.talent_name || 'Talent' },
+                  ])
+              ).values()]
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((talent) => (
+                  <option key={talent.id} value={talent.id}>{talent.name}</option>
+                ))}
+            </select>
+          </label>
           <div className="sport-teacher-competition-date-grid">
             <label>Start date *<input type="date" value={competitionForm.start_date} onChange={(event) => setCompetitionForm({ ...competitionForm, start_date: event.target.value })} required /></label>
             <label>End date<input type="date" value={competitionForm.end_date} onChange={(event) => setCompetitionForm({ ...competitionForm, end_date: event.target.value })} /></label>
           </div>
+          <section
+            aria-label="Select competition participants"
+            style={{
+              margin: '16px 0',
+              padding: '14px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+                marginBottom: '8px',
+              }}
+            >
+              <strong>Students participating *</strong>
+              <button
+                type="button"
+                disabled={!filteredCompetitionStudents.length}
+                onClick={() => {
+                  const ids = filteredCompetitionStudents.map((student) => String(student.id));
+                  const allSelected =
+                    ids.length > 0 &&
+                    ids.every((id) => selectedCompetitionStudentIds.includes(id));
+
+                  setSelectedCompetitionStudentIds(allSelected ? [] : ids);
+                }}
+                style={{
+                  padding: '6px 10px',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  background: 'white',
+                  cursor: filteredCompetitionStudents.length ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {filteredCompetitionStudents.length > 0 &&
+                filteredCompetitionStudents.every((student) =>
+                  selectedCompetitionStudentIds.includes(String(student.id))
+                )
+                  ? 'Clear selection'
+                  : 'Select all'}
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#6b7280' }}>
+              Select only the students who will take part in this competition.
+            </p>
+
+            <label style={{ display: 'block', marginBottom: '10px' }}>
+              Search Student by Name, Student ID or Talent
+              <input
+                type="search"
+                value={competitionStudentSearch}
+                onChange={(event) => setCompetitionStudentSearch(event.target.value)}
+                placeholder="Search students or talents..."
+                aria-label="Search competition students by name, student ID or talent"
+              />
+            </label>
+
+            <div
+              style={{
+                maxHeight: '230px',
+                overflowY: 'auto',
+                border: '1px solid #e5e7eb',
+                borderRadius: '6px',
+              }}
+            >
+              {filteredCompetitionStudents.map((student) => {
+                const studentId = String(student.id);
+                const isSelected = selectedCompetitionStudentIds.includes(studentId);
+
+                return (
+                  <label
+                    key={student.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px',
+                      borderBottom: '1px solid #f3f4f6',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(event) => {
+                        setSelectedCompetitionStudentIds((current) =>
+                          event.target.checked
+                            ? current.includes(studentId)
+                              ? current
+                              : [...current, studentId]
+                            : current.filter((id) => id !== studentId)
+                        );
+                      }}
+                      style={{ width: 'auto', margin: 0, flexShrink: 0 }}
+                    />
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <span>{student.first_name} {student.last_name}</span>
+                      {student.student_id && (
+                        <small style={{ color: '#6b7280' }}>{student.student_id}</small>
+                      )}
+                      <small style={{ color: '#64748b' }}>
+                        Talents: {getStudentTalentNames(student.id, competitionForm.talent)}
+                      </small>
+                    </span>
+                  </label>
+                );
+              })}
+
+              {students.length === 0 ? (
+                <p style={{ padding: '12px', color: '#6b7280', fontSize: '13px' }}>
+                  No students were found for your school.
+                </p>
+              ) : filteredCompetitionStudents.length === 0 ? (
+                <p style={{ padding: '12px', color: '#6b7280', fontSize: '13px' }}>
+                  No students match this search.
+                </p>
+              ) : null}
+            </div>
+
+            <p style={{ margin: '10px 0 0', fontSize: '13px', fontWeight: 600 }}>
+              Selected: {selectedCompetitionStudentIds.length} student(s)
+            </p>
+          </section>
+
           <div className="sport-teacher-competition-form-actions">
             {selectedCompetition && <button type="button" className="sport-teacher-competition-delete" onClick={handleDeleteCompetition} disabled={competitionSubmitting}>Delete competition</button>}
             <button type="submit" className="sport-teacher-competition-save" disabled={competitionSubmitting}>{competitionSubmitting ? (selectedCompetition ? 'Saving changes...' : 'Adding competition...') : (selectedCompetition ? 'Save changes' : 'Add competition')}</button>
@@ -1926,12 +2557,23 @@ const SportTeacherPage = () => {
           </button>
         </div>
       </header>
-      <aside className={`sport-teacher-navigation ${navigationOpen ? 'is-open' : ''}`}>
-        <div className="sport-teacher-navigation-heading">{schoolName}</div>
+      <aside
+        className={`sport-teacher-navigation sport-teacher-bootstrap-navigation nav flex-column gap-1 p-2 ${
+          navigationOpen ? 'is-open' : ''
+        }`}
+        aria-label="Sport Teacher navigation"
+      >
+        <div className="sport-teacher-navigation-heading px-2 py-2">
+          {schoolName}
+        </div>
         {menuItems.map((item) => (
           <button
             type="button"
             key={item.key}
+            className={`btn text-start w-100 sport-teacher-bootstrap-nav-link ${
+              activeTab === item.key ? 'active' : ''
+            }`}
+            aria-current={activeTab === item.key ? 'page' : undefined}
             onClick={() => {
               setActiveTab(item.key);
               setNavigationOpen(false);
@@ -2214,68 +2856,6 @@ const SportTeacherPage = () => {
       </div>
 
       {/* ====== MODALS ====== */}
-      {/* Register Student Modal */}
-      {modals.registerStudent && (
-        <>
-          <button type="button" className="sport-teacher-drawer-backdrop sport-teacher-registration-backdrop" aria-label="Close student registration" onClick={() => closeModal('registerStudent')} />
-          <aside className="sport-teacher-search-drawer sport-teacher-registration-drawer" style={{ '--drawer-width': `${drawerWidth}px` }} aria-label="Register student">
-            <div className="sport-teacher-drawer-resize-edge" onPointerDown={(event) => { event.preventDefault(); setIsResizingDrawer(true); }} role="separator" aria-label="Resize slide-over panel" />
-            <div className="sport-teacher-search-drawer-header">
-              <h2>Register Student</h2>
-              <button type="button" onClick={() => closeModal('registerStudent')} aria-label="Close student registration">&times;</button>
-            </div>
-            <form onSubmit={handleRegisterStudent}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>First Name *</label>
-                  <input type="text" name="first_name" value={studentForm.first_name} onChange={(e) => setStudentForm({ ...studentForm, first_name: e.target.value })} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Last Name *</label>
-                  <input type="text" name="last_name" value={studentForm.last_name} onChange={(e) => setStudentForm({ ...studentForm, last_name: e.target.value })} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px' }} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Gender *</label>
-                  <select name="gender" value={studentForm.gender} onChange={(e) => setStudentForm({ ...studentForm, gender: e.target.value })} required style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px' }}>
-                    <option value="M">Male</option>
-                    <option value="F">Female</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '14px', fontWeight: '500', color: '#374151' }}>Date of Birth</label>
-                  <input type="date" name="date_of_birth" value={studentForm.date_of_birth} onChange={(e) => setStudentForm({ ...studentForm, date_of_birth: e.target.value })} style={{ padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '14px' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>Class / Level</label>
-                  <select value={studentForm.education_level} onChange={(e) => setStudentForm({ ...studentForm, education_level: e.target.value })} style={{ minHeight: '42px', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '14px', boxSizing: 'border-box' }}><option value="">Not specified</option>{educationLevels.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}</select>
-                </div>
-              </div>
-              <div className="sport-teacher-registration-form-grid sport-teacher-registration-password-club-row">
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>Password *</label>
-                  <input type="password" name="password" value={studentForm.password} onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })} required minLength="8" placeholder="Min 8 characters" style={{ padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '14px', boxSizing: 'border-box' }} />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#334155' }}>Assign school club <span className="sport-teacher-optional-label">Optional</span></label>
-                  <select value={studentForm.club} onChange={(e) => setStudentForm({ ...studentForm, club: e.target.value })} disabled={!registrationClubs.length} style={{ minHeight: '42px', padding: '10px 12px', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '14px', boxSizing: 'border-box' }}><option value="">{registrationClubs.length ? 'No club' : 'No club registered for this school'}</option>{registrationClubs.map((club) => <option key={club.id} value={club.id}>{club.name}</option>)}</select>
-                </div>
-              </div>
-              <fieldset className="sport-teacher-registration-talents">
-                <legend>Assign talents <span className="sport-teacher-optional-label">Optional</span></legend>
-                {renderTalentCheckboxes(studentForm.talents, (talents) => setStudentForm({ ...studentForm, talents }))}
-                {!talents.length && <p className="sport-teacher-empty-message">No talents available.</p>}
-              </fieldset>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-                <button type="button" onClick={() => closeModal('registerStudent')} style={{ padding: '8px 20px', border: '1px solid #e5e7eb', borderRadius: '6px', background: 'white', color: '#6b7280', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" style={{ padding: '8px 20px', border: 'none', borderRadius: '6px', background: '#0E1DB6', color: 'white', cursor: 'pointer' }}>Register Student</button>
-              </div>
-            </form>
-          </aside>
-        </>
-      )}
-
       {/* Assign Talent Modal */}
       {modals.assignTalent && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>

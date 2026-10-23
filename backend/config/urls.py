@@ -11,15 +11,17 @@ Class-based views
     1. Add an import:  from other_app.views import Home
     2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
 Including another URLconf
-    1. Import the include() function: from django.urls import include, path
+    1. Import the include() function:  from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenRefreshView, TokenViewBase
 
 from competitions.views import BulkResultUploadView
+
+from core.token_serializers import StudentAwareTokenObtainPairSerializer
 
 from core.views import (
     CountryViewSet,
@@ -47,12 +49,38 @@ from core.views import (
     MessageViewSet,
     NotificationViewSet,
     AuditLogViewSet,
+    RequestPasswordResetView,
+    ResetPasswordView,
 )
 from students.views import EducationLevelViewSet, StudentViewSet, ParentViewSet
-from competitions.views import CompetitionViewSet, CompetitionParticipationViewSet, CompetitionJudgeViewSet
-from results.views import DistrictCompetitionSubmissionViewSet, ResultViewSet, ResultDetailViewSet, ResultPromotionViewSet, SchoolCompetitionSubmissionViewSet, ZoneCompetitionSubmissionViewSet
+from competitions.views import (
+    CompetitionViewSet,
+    CompetitionParticipationViewSet,
+    CompetitionJudgeViewSet,
+)
+from results.views import (
+    DistrictCompetitionSubmissionViewSet,
+    ResultViewSet,
+    ResultDetailViewSet,
+    ResultPromotionViewSet,
+    SchoolCompetitionSubmissionViewSet,
+    ZoneCompetitionSubmissionViewSet,
+)
+
+
+class StudentAwareTokenObtainPairView(TokenViewBase):
+    """
+    Custom JWT login view.
+
+    Students can log in using either their actual username
+    or their Student ID.
+    """
+
+    serializer_class = StudentAwareTokenObtainPairSerializer
+
 
 router = DefaultRouter()
+
 router.register('countries', CountryViewSet)
 router.register('zones', ZoneViewSet)
 router.register('regions', RegionViewSet)
@@ -90,11 +118,50 @@ router.register('messages', MessageViewSet)
 router.register('notifications', NotificationViewSet)
 router.register('audit-logs', AuditLogViewSet)
 
+
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/registration-locations/', RegistrationLocationsView.as_view(), name='registration_locations'),
-    path('api/', include(router.urls)),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/competitions/bulk-upload/', BulkResultUploadView.as_view(), name='bulk-upload'),
+
+    path(
+        'api/registration-locations/',
+        RegistrationLocationsView.as_view(),
+        name='registration_locations'
+    ),
+
+    path(
+        'api/',
+        include(router.urls)
+    ),
+
+    # Custom JWT login endpoint.
+    # Students can use either their username or Student ID.
+    path(
+        'api/token/',
+        StudentAwareTokenObtainPairView.as_view(),
+        name='token_obtain_pair'
+    ),
+
+    path(
+        'api/token/refresh/',
+        TokenRefreshView.as_view(),
+        name='token_refresh'
+    ),
+
+    path(
+        'api/competitions/bulk-upload/',
+        BulkResultUploadView.as_view(),
+        name='bulk-upload'
+    ),
+
+    path(
+        'api/password-reset/',
+        RequestPasswordResetView.as_view(),
+        name='password_reset'
+    ),
+
+    path(
+        'api/password-reset/confirm/',
+        ResetPasswordView.as_view(),
+        name='password_reset_confirm'
+    ),
 ]

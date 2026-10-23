@@ -1017,3 +1017,1191 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* DISTRICT MANAGER ONLY — layout and visual improvements */
+
+.sport-teacher-page .district-manager-content {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 24px;
+  color: #243047;
+}
+
+.sport-teacher-page .district-manager-content .admin-section {
+  min-width: 0;
+  margin-bottom: 22px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e3e8f0;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(31, 45, 75, 0.05);
+}
+
+.sport-teacher-page .district-manager-content .district-home-grid {
+  gap: 20px;
+}
+
+.sport-teacher-page .district-manager-content .district-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.sport-teacher-page .district-manager-content .admin-section input:not([type="checkbox"]):not([type="radio"]),
+.sport-teacher-page .district-manager-content .admin-section select,
+.sport-teacher-page .district-manager-content .admin-section textarea {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: #243047;
+  background: #fff;
+  border: 1px solid #d5dce8;
+  border-radius: 7px;
+  font: inherit;
+}
+
+.sport-teacher-page .district-manager-content .admin-section input:focus,
+.sport-teacher-page .district-manager-content .admin-section select:focus,
+.sport-teacher-page .district-manager-content .admin-section textarea:focus {
+  outline: none;
+  border-color: #3155c6;
+  box-shadow: 0 0 0 3px rgba(49, 85, 198, 0.12);
+}
+
+.sport-teacher-page .district-manager-content .admin-section table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sport-teacher-page .district-manager-content .admin-section th {
+  padding: 13px 14px;
+  color: #43516a;
+  background: #f2f5fa;
+  border-bottom: 1px solid #e1e7f0;
+  text-align: left;
+  font-weight: 700;
+}
+
+.sport-teacher-page .district-manager-content .admin-section td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #edf0f5;
+  vertical-align: middle;
+}
+
+.sport-teacher-page .district-manager-content .admin-section tbody tr:hover {
+  background: #f8faff;
+}
+
+.sport-teacher-page .district-manager-content button {
+  transition: box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.sport-teacher-page .district-manager-content button:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+@media (max-width: 768px) {
+  .sport-teacher-page .district-manager-content {
+    padding: 14px;
+  }
+
+  .sport-teacher-page .district-manager-content .district-form-grid,
+  .sport-teacher-page .district-manager-content .district-home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sport-teacher-page .district-manager-content .admin-section {
+    padding: 16px;
+    overflow-x: auto;
+  }
+}
+
+
+/* District Manager: Register School form only */
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form {
+  max-width: 1000px;
+  margin: 24px auto;
+  padding: 30px;
+  background: #ffffff;
+  border: 1px solid #e1e7f0;
+  border-radius: 16px;
+  box-shadow: 0 8px 28px rgba(31, 45, 75, 0.07);
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 24px;
+  margin-bottom: 28px;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child > label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+  color: #344158;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child > label::before {
+  content: attr(data-label);
+  color: #344158;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child input,
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #d5dce8;
+  border-radius: 9px;
+  background: #fff;
+  color: #243047;
+  font-size: 14px;
+  font-weight: 400;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child input:focus,
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child select:focus {
+  outline: none;
+  border-color: #3155c6;
+  box-shadow: 0 0 0 3px rgba(49, 85, 198, 0.12);
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:first-child input:disabled {
+  background: #f1f4f8;
+  color: #667085;
+  cursor: not-allowed;
+}
+
+/* Action buttons: aligned together at the bottom */
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding-top: 22px;
+  border-top: 1px solid #e8edf4;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 145px;
+  min-height: 46px;
+  padding: 12px 22px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child .sport-teacher-secondary-button {
+  background: #fff;
+  color: #475467;
+  border: 1px solid #d0d5dd;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child .sport-teacher-secondary-button:hover:not(:disabled) {
+  background: #f5f7fa;
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child .district-primary-button {
+  background: #3155c6;
+  color: #fff;
+  border: 1px solid #3155c6;
+  box-shadow: 0 3px 8px rgba(49, 85, 198, 0.18);
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child .district-primary-button:hover:not(:disabled) {
+  background: #23409e;
+  box-shadow: 0 5px 13px rgba(49, 85, 198, 0.24);
+}
+
+.sport-teacher-page .district-manager-content
+.district-content-section > .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .sport-teacher-page .district-manager-content
+  .district-content-section > .sport-teacher-registration-form {
+    padding: 18px;
+    margin: 16px auto;
+  }
+
+  .sport-teacher-page .district-manager-content
+  .district-content-section > .sport-teacher-registration-form
+  .sport-teacher-registration-form-grid:first-child {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
+  }
+
+  .sport-teacher-page .district-manager-content
+  .district-content-section > .sport-teacher-registration-form
+  .sport-teacher-registration-form-grid:last-child {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .sport-teacher-page .district-manager-content
+  .district-content-section > .sport-teacher-registration-form
+  .sport-teacher-registration-form-grid:last-child button {
+    width: 100%;
+  }
+}
+
+/* Align Register School action buttons */
+.district-manager-page .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 14px !important;
+  width: 100%;
+  margin: 24px auto 0;
+}
+
+.district-manager-page .sport-teacher-registration-form
+.sport-teacher-registration-form-grid:last-child button {
+  box-sizing: border-box !important;
+  flex: 0 0 160px !important;
+  width: 160px !important;
+  min-width: 160px !important;
+  max-width: 160px !important;
+  height: 42px !important;
+  padding: 0 12px !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1.2 !important;
+}
+
+@media (max-width: 480px) {
+  .district-manager-page .sport-teacher-registration-form
+  .sport-teacher-registration-form-grid:last-child {
+    flex-wrap: wrap;
+  }
+}
+
+
+/* Bootstrap navigation enhancements — District Manager only */
+.district-manager-page .district-manager-navigation {
+  gap: 4px !important;
+  padding: 12px 10px !important;
+}
+
+.district-manager-page .district-manager-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: normal;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.district-manager-page .district-manager-nav-link:hover,
+.district-manager-page .district-manager-nav-link:focus-visible {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+.district-manager-page .district-manager-nav-link.active {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: #fff;
+  color: #174a78;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+
+.district-manager-page .district-manager-nav-link:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .district-manager-page .district-manager-nav-link {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   ZONE MANAGER — VISUAL POLISH
+   Scoped to this role to protect other dashboards.
+   ========================================================= */
+
+.district-manager-page {
+  background: #f5f7fb;
+  color: #172033;
+}
+
+.district-manager-page .district-manager-content {
+  width: calc(100% - 240px);
+  margin-left: 240px;
+  min-width: 0;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.district-manager-page .district-home-grid {
+  width: 100%;
+  max-width: 1440px;
+  gap: 22px;
+}
+
+.district-manager-page .district-home-card,
+.district-manager-page .district-result-card,
+.district-manager-page .district-announcements-card {
+  min-width: 0;
+  border: 1px solid #e1e8f2;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.045);
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.district-manager-page .district-home-card {
+  padding: 24px;
+}
+
+.district-manager-page .district-home-card:hover,
+.district-manager-page .district-result-card:hover,
+.district-manager-page .district-announcements-card:hover {
+  border-color: #cbd8eb;
+  box-shadow: 0 9px 26px rgba(15, 23, 42, 0.075);
+}
+
+.district-manager-page .district-card-heading {
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.district-manager-page .district-card-heading h2,
+.district-manager-page .district-results-heading h2,
+.district-manager-page .district-announcements-header h2 {
+  color: #172554;
+  font-size: 19px;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.district-manager-page .district-card-heading p,
+.district-manager-page .district-results-heading p,
+.district-manager-page .district-announcements-header p {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.district-manager-page .district-card-kicker {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.district-manager-page .district-primary-button,
+.district-manager-page .district-card-action,
+.district-manager-page .district-result-card button,
+.district-manager-page .district-announcements-card button {
+  transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.district-manager-page .district-primary-button {
+  border-radius: 9px;
+  background: #263ebd;
+}
+
+.district-manager-page .district-primary-button:hover:not(:disabled) {
+  background: #1e3199;
+  box-shadow: 0 4px 12px rgba(38, 62, 189, 0.2);
+}
+
+.district-manager-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.district-manager-page .district-text-button {
+  border-radius: 7px;
+  padding: 8px 10px;
+  color: #3046b8;
+  font-weight: 700;
+}
+
+.district-manager-page .district-text-button:hover:not(:disabled) {
+  background: #eef2ff;
+}
+
+.district-manager-page .talent-chart-layout {
+  flex-wrap: wrap;
+  gap: 24px;
+}
+
+.district-manager-page .talent-legend {
+  min-width: 140px;
+}
+
+.district-manager-page .district-competition-list {
+  max-height: 320px;
+  overscroll-behavior: contain;
+}
+
+.district-manager-page .district-competition-row {
+  width: 100%;
+  min-width: 0;
+  padding: 13px 10px;
+  border-bottom: 1px solid #edf1f7;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.district-manager-page .district-competition-row:hover {
+  background: #f7f9ff;
+}
+
+.district-manager-page .district-competition-title {
+  overflow-wrap: anywhere;
+}
+
+.district-manager-page .district-competition-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.district-manager-page .district-calendar-card {
+  overflow: hidden;
+}
+
+.district-manager-page .calendar-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.district-manager-page .calendar-controls button {
+  min-width: 34px;
+  min-height: 34px;
+  border: 1px solid #e0e7f1;
+  border-radius: 8px;
+  background: #fff;
+  color: #263ebd;
+  font-weight: 700;
+}
+
+.district-manager-page .calendar-controls button:hover {
+  background: #eef2ff;
+}
+
+.district-manager-page .calendar-controls span {
+  color: #172554;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.district-manager-page .calendar-weekdays,
+.district-manager-page .calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.district-manager-page .calendar-weekdays {
+  margin-bottom: 8px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.district-manager-page .calendar-day {
+  display: grid;
+  min-width: 0;
+  min-height: 38px;
+  place-items: center;
+  border-radius: 9px;
+  color: #334155;
+  font-size: 12px;
+}
+
+.district-manager-page .calendar-day.has-competition {
+  background: #e0e7ff;
+  color: #263ebd;
+  font-weight: 800;
+}
+
+.district-manager-page .calendar-day.is-today {
+  outline: 2px solid #263ebd;
+  outline-offset: -2px;
+  font-weight: 800;
+}
+
+.district-manager-page .calendar-events {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.district-manager-page .calendar-events > div {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 10px;
+  row-gap: 4px;
+  padding: 12px;
+  border: 1px solid #e8edf5;
+  border-radius: 10px;
+  background: #fafbff;
+}
+
+.district-manager-page .calendar-events .calendar-event-dot {
+  grid-row: span 2;
+  margin-top: 5px;
+  background: #3949c7;
+}
+
+.district-manager-page .calendar-events strong {
+  overflow-wrap: anywhere;
+  color: #172554;
+  font-size: 13px;
+}
+
+.district-manager-page .calendar-events small {
+  color: #64748b;
+  font-size: 11px;
+}
+
+/* Results pages */
+.district-manager-page .district-results-stack {
+  display: grid;
+  width: 100%;
+  max-width: 1440px;
+  gap: 22px;
+  margin: 0 auto;
+}
+
+.district-manager-page .district-results-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 4px 2px;
+}
+
+.district-manager-page .district-results-heading h2 {
+  margin: 0;
+}
+
+.district-manager-page .district-results-heading p {
+  margin: 6px 0 0;
+}
+
+.district-manager-page .district-result-card {
+  overflow: hidden;
+}
+
+.district-manager-page .district-result-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 22px 24px;
+  border-bottom: 1px solid #e8edf5;
+}
+
+.district-manager-page .district-result-card-header h3 {
+  margin: 0;
+  color: #172554;
+  font-size: 17px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.district-manager-page .district-result-card-header p {
+  max-width: 720px;
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.district-manager-page .district-result-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.district-manager-page .district-result-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.district-manager-page .district-result-table-wrap .data-table {
+  width: 100%;
+  min-width: 850px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.district-manager-page .district-result-table-wrap .data-table th {
+  padding: 13px 15px;
+  background: #f5f7fc;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.district-manager-page .district-result-table-wrap .data-table td {
+  padding: 13px 15px;
+  border-bottom: 1px solid #edf1f7;
+  color: #334155;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.district-manager-page .district-result-table-wrap .data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.district-manager-page .district-result-table-wrap .data-table tbody tr:hover td {
+  background: #fafbff;
+}
+
+.district-manager-page .district-result-table-wrap input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3046b8;
+  vertical-align: middle;
+}
+
+.district-manager-page .district-result-table-wrap .district-score-input {
+  width: 90px;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #172033;
+  font: inherit;
+}
+
+.district-manager-page .district-result-table-wrap .district-score-input:focus {
+  border-color: #5267dc;
+  outline: 3px solid rgba(82, 103, 220, 0.14);
+}
+
+.district-manager-page .district-promoted-label {
+  display: inline-block;
+  margin: 4px 0 0 5px;
+  padding: 4px 7px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.district-manager-page .district-result-empty {
+  padding: 28px 16px !important;
+  color: #64748b !important;
+  text-align: center;
+}
+
+/* Announcements */
+.district-manager-page .district-announcements-page {
+  display: grid;
+  width: 100%;
+  max-width: 1200px;
+  gap: 22px;
+  margin: 0 auto;
+}
+
+.district-manager-page .district-announcements-card {
+  overflow: hidden;
+  padding: 24px;
+}
+
+.district-manager-page .district-announcements-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.district-manager-page .district-announcements-header h2 {
+  margin: 0;
+}
+
+.district-manager-page .district-announcements-header p {
+  margin: 5px 0 0;
+}
+
+.district-manager-page .district-announcements-list {
+  display: grid;
+  gap: 12px;
+}
+
+.district-manager-page .district-announcement-item {
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid #e6ebf3;
+  border-radius: 12px;
+  background: #fbfcff;
+}
+
+.district-manager-page .district-announcement-item-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.district-manager-page .district-announcement-item-heading strong,
+.district-manager-page .district-announcement-title {
+  color: #172554;
+  font-size: 14px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.district-manager-page .district-announcement-item-heading > span {
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.district-manager-page .district-announcement-item > p {
+  margin: 12px 0 0;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.district-manager-page .district-announcement-title {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.district-manager-page .district-announcement-title:hover {
+  color: #3046b8;
+  text-decoration: underline;
+}
+
+.district-manager-page .district-empty-state {
+  padding: 18px 12px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.district-manager-page .district-manager-alert {
+  position: relative;
+  margin-bottom: 20px;
+  padding: 14px 42px 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fff1f2;
+  color: #9f1239;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.district-manager-page .district-manager-alert button {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* Tablet */
+@media (max-width: 980px) {
+  .district-manager-page .district-manager-content {
+    width: 100%;
+    margin-left: 0;
+    padding: 24px 20px;
+  }
+
+  .district-manager-page .district-home-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .district-manager-page .district-result-card-header {
+    padding: 19px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .district-manager-page .district-manager-content {
+    padding: 16px 12px 28px;
+  }
+
+  .district-manager-page .district-home-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .district-manager-page .district-home-card {
+    padding: 17px;
+    border-radius: 13px;
+  }
+
+  .district-manager-page .district-card-heading {
+    align-items: flex-start;
+  }
+
+  .district-manager-page .district-card-heading h2,
+  .district-manager-page .district-results-heading h2,
+  .district-manager-page .district-announcements-header h2 {
+    font-size: 17px;
+  }
+
+  .district-manager-page .district-card-action {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .district-manager-page .talent-chart-layout {
+    justify-content: center;
+    gap: 18px;
+  }
+
+  .district-manager-page .talent-donut {
+    flex-basis: 112px;
+    width: 112px;
+    height: 112px;
+  }
+
+  .district-manager-page .talent-donut > div {
+    width: 62px;
+    height: 62px;
+  }
+
+  .district-manager-page .talent-legend {
+    min-width: 130px;
+  }
+
+  .district-manager-page .calendar-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .district-manager-page .calendar-weekdays,
+  .district-manager-page .calendar-grid {
+    gap: 3px;
+  }
+
+  .district-manager-page .calendar-day {
+    min-height: 34px;
+    font-size: 11px;
+  }
+
+  .district-manager-page .district-results-stack,
+  .district-manager-page .district-announcements-page {
+    gap: 15px;
+  }
+
+  .district-manager-page .district-result-card-header {
+    padding: 16px;
+  }
+
+  .district-manager-page .district-result-header-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .district-manager-page .district-result-header-actions > button {
+    flex: 1 1 150px;
+    min-height: 40px;
+  }
+
+  .district-manager-page .district-announcements-card {
+    padding: 17px;
+  }
+
+  .district-manager-page .district-announcements-header {
+    align-items: flex-start;
+  }
+
+  .district-manager-page .district-announcement-item {
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .district-manager-page *,
+  .district-manager-page *::before,
+  .district-manager-page *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* Professional Announcements Design */
+.district-manager-page .district-announcements-page {
+  gap: 24px;
+  max-width: 1200px;
+}
+
+.district-manager-page .district-announcements-card {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.district-manager-page .district-announcements-header {
+  margin: 0;
+  padding: 24px;
+  border-bottom: 1px solid #e8edf5;
+  background: linear-gradient(135deg, #f8faff 0%, #eef4ff 100%);
+}
+
+.district-manager-page .district-announcements-header h2 {
+  color: #172554;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.district-manager-page .district-announcements-header p {
+  margin-top: 7px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.district-manager-page .district-announcements-list {
+  gap: 14px;
+  padding: 22px;
+}
+
+.district-manager-page .district-announcement-item {
+  position: relative;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #4263eb;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.025);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.district-manager-page .district-announcement-item:hover {
+  border-color: #c7d2fe;
+  border-left-color: #3046b8;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+  transform: translateY(-2px);
+}
+
+.district-manager-page .district-announcement-item-heading {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.district-manager-page .district-announcement-item-heading strong,
+.district-manager-page .district-announcement-title {
+  color: #172554;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.district-manager-page .district-announcement-item-heading > span {
+  flex-shrink: 0;
+  padding: 5px 9px;
+  border: 1px solid #dbeafe;
+  border-radius: 20px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.district-manager-page .district-announcement-item > p {
+  margin-top: 12px;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.district-manager-page .district-announcement-title:hover,
+.district-manager-page .district-announcement-title:focus-visible {
+  color: #3046b8;
+  text-decoration: underline;
+}
+
+.district-manager-page .district-empty-state {
+  margin: 0;
+  padding: 32px 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  line-height: 1.8;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .district-manager-page .district-announcements-header {
+    padding: 18px;
+  }
+
+  .district-manager-page .district-announcements-list {
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .district-manager-page .district-announcement-item {
+    padding: 15px;
+  }
+
+  .district-manager-page .district-announcement-item-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .district-manager-page .district-announcement-item-heading > span {
+    white-space: normal;
+  }
+}
+
+/* Colored badges for result and promotion statuses */
+.district-manager-page .district-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.district-manager-page .district-status-badge.is-promoted,
+.district-manager-page .district-status-badge.is-awarded {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #bbf7d0;
+}
+
+.district-manager-page .district-status-badge.is-not-promoted,
+.district-manager-page .district-status-badge.is-fail {
+  color: #991b1b;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.district-manager-page .district-status-badge.is-pending {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fde68a;
+}
+
+.district-manager-page .district-status-badge.is-none {
+  color: #475569;
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+
+/* Fix District Manager homepage grid card sizing */
+.district-manager-page .district-home-grid > .district-home-card {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  margin: 0;
+  box-sizing: border-box;
+}

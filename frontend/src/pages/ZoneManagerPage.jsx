@@ -1035,7 +1035,9 @@ export default function ZoneManagerPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {competition.entries.map(({ participation, detail, student, school, isPromoted, isEligibleForPromotion }) => (
+                      {competition.entries.filter(({ detail }) =>
+                        detail && Number(detail.percentage_score ?? detail.raw_score ?? 0) >= 50
+                      ).map(({ participation, detail, student, school, isPromoted, isEligibleForPromotion }) => (
                         <tr
                           key={`${participation.id}-${detail.id}`}
                           onClick={(event) => {
@@ -1190,7 +1192,10 @@ export default function ZoneManagerPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {competition.entries.map((result) => (
+                  {competition.entries.filter((result) =>
+                    result.detail &&
+                    Number(result.detail.percentage_score ?? result.detail.raw_score ?? 0) >= 50
+                  ).map((result) => (
                     <tr
                       key={`${result.id}-${result.detail?.id || 'overall'}`}
                       onClick={(event) => {

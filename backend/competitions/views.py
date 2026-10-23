@@ -49,7 +49,6 @@ class CompetitionViewSet(ScopedQuerysetMixin, viewsets.ModelViewSet):
                 raise ValidationError('Sport teachers can create only school-level competitions for their school.')
             competition = serializer.save(organizer=user, content_type=ContentType.objects.get_for_model(School), object_id=user.school_id)
             competition.schools.set([user.school])
-            competition.participants.clear()
             return
         if user.role == 'district_manager':
             district = user.district

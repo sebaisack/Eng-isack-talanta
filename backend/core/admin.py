@@ -711,6 +711,17 @@ class UserChangeFormWithPassword(UserChangeForm):
         cleaned_data = super().clean()
         role = cleaned_data.get('role')
 
+        # Keep only the geographic scope appropriate to each manager role.
+        clear_fields = {
+            'zone_manager': ('region', 'district', 'ward', 'school'),
+            'region_manager': ('zone', 'district', 'ward', 'school'),
+            'district_manager': ('ward', 'school'),
+            'ward_manager': ('school',),
+        }
+        for field in clear_fields.get(role, ()):
+            if field in cleaned_data:
+                cleaned_data[field] = None
+
         if role == 'student' and not cleaned_data.get('student_gender'):
             self.add_error('student_gender', 'Gender is required for a student account.')
 
@@ -736,6 +747,23 @@ class UserChangeFormWithPassword(UserChangeForm):
             self.add_error('ward', 'Choose a ward belonging to the selected country.')
         if school and country and school.country_id != country.pk:
             self.add_error('school', 'Choose a school belonging to the selected country.')
+
+        # A geographic area may have only one manager for its role.
+        manager_scope = {
+            'zone_manager': ('zone', 'zone'),
+            'region_manager': ('region', 'region'),
+            'district_manager': ('district', 'district'),
+            'ward_manager': ('ward', 'ward'),
+        }
+        if role in manager_scope:
+            field, relation = manager_scope[role]
+            area = cleaned_data.get(field)
+            if area:
+                existing = User.objects.filter(role=role, **{f'{relation}_id': area.pk})
+                if self.instance.pk:
+                    existing = existing.exclude(pk=self.instance.pk)
+                if existing.exists():
+                    self.add_error(field, 'This area already has a manager.')
 
         password_new = cleaned_data.get('password_new')
         password_confirm = cleaned_data.get('password_confirm')

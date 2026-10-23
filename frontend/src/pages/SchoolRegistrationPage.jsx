@@ -12,12 +12,23 @@ const initialForm = {
   region: '',
   district: '',
   ward: '',
+  city_council: '',
+  street_village: '',
   phone: '',
   physical_address: '',
   email: '',
 };
 
 const list = (response) => response?.data?.results || [];
+
+const isTanzaniaCountry = (countryId, countryList) => {
+  const country = countryList.find(
+    (item) => String(item.id) === String(countryId)
+  );
+  const name = String(country?.name || '').toLowerCase();
+  const code = String(country?.code || '').toLowerCase();
+  return name === 'tanzania' || code === 'tza' || code === 'tz';
+};
 
 export default function SchoolRegistrationPage() {
   const navigate = useNavigate();
@@ -44,8 +55,6 @@ export default function SchoolRegistrationPage() {
         const countryList = list(countriesResponse);
         setCountries(countryList);
         setOwnershipOptions(ownershipResponse.data.results || ownershipResponse.data || []);
-        const tanzania = countryList.find((country) => country.name.toLowerCase() === 'tanzania' || country.code.toLowerCase() === 'tza');
-        if (tanzania) setForm((current) => ({ ...current, country: String(tanzania.id) }));
       } catch (err) {
         setError(err.response?.data?.detail || 'Unable to load location options. Please check your network connection and try again.');
       } finally {
@@ -56,7 +65,13 @@ export default function SchoolRegistrationPage() {
   }, []);
 
   useEffect(() => {
-    if (!form.country) return;
+    if (!form.country || !isTanzaniaCountry(form.country, countries)) {
+      setZones([]);
+      setRegions([]);
+      setDistricts([]);
+      setWards([]);
+      return;
+    }
     apiService.getAllZones({ country: form.country })
       .then((response) => setZones(list(response)))
       .catch(() => setError('Unable to load location options. Please check your network connection and try again.'));
@@ -96,26 +111,78 @@ export default function SchoolRegistrationPage() {
       region: { district: '', ward: '' },
       district: { ward: '' },
     }[name] || {};
-    setForm({ ...form, [name]: value, ...cleared });
+    setForm({
+      ...form,
+      [name]: value,
+      ...(name === 'country' ? {
+        phone: '',
+        zone: '',
+        region: '',
+        district: '',
+        ward: '',
+        city_council: '',
+        street_village: '',
+      } : {}),
+      ...cleared,
+    });
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setSchoolsError('');
+
+    const schoolName = form.name.trim();
+    const registryNumber = form.registry_number.trim();
+
+    if (
+      !schoolName ||
+      schoolName !== schoolName.toLowerCase().replace(
+        /(^|[\s-])([a-z])/g,
+        (_, boundary, letter) => boundary + letter.toUpperCase()
+      )
+    ) {
+      setSchoolsError('Use title case for every word, e.g. Azania Secondary School.');
+      return;
+    }
+
+    if (!/^[A-Za-z]\.?[0-9]{3,4}$/.test(registryNumber)) {
+      setSchoolsError('Enter a valid registry number, e.g. S2047, S703, p0655 or s.0677.');
+      return;
+    }
+
+    const tanzaniaSelected = isTanzaniaCountry(form.country, countries);
+    if (tanzaniaSelected && !/^[0-9]{9}$/.test(form.phone)) {
+      setSchoolsError('For Tanzania, enter exactly 9 digits after +255.');
+      return;
+    }
+    if (!tanzaniaSelected && form.phone && !/^[0-9]+$/.test(form.phone)) {
+      setSchoolsError('Enter digits only for the phone number.');
+      return;
+    }
+
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setSchoolsError('Enter a valid school email address.');
+      return;
+    }
+
     try {
       setSaving(true);
-      setSchoolsError('');
       await apiService.createSchool({
-        name: form.name,
-        registry_number: form.registry_number,
+        name: form.name.trim(),
+        registry_number: form.registry_number.trim(),
         ownership_type: form.ownership_type,
         country: Number(form.country),
-        zone: Number(form.zone),
-        region: Number(form.region),
-        district: Number(form.district),
-        ward: Number(form.ward),
-        phone: form.phone,
+        zone: tanzaniaSelected ? Number(form.zone) : null,
+        region: tanzaniaSelected ? Number(form.region) : null,
+        district: tanzaniaSelected ? Number(form.district) : null,
+        ward: tanzaniaSelected ? Number(form.ward) : null,
+        city_council: tanzaniaSelected ? '' : form.city_council.trim(),
+        street_village: tanzaniaSelected ? '' : form.street_village.trim(),
+        phone: tanzaniaSelected && form.phone
+          ? `+255${form.phone}`
+          : form.phone,
         physical_address: form.physical_address,
-        email: form.email,
+        email: form.email.trim(),
       });
       setSubmitted(true);
     } catch (err) {
@@ -150,11 +217,20 @@ export default function SchoolRegistrationPage() {
               <label>Registry number<input name="registry_number" value={form.registry_number} onChange={updateField} placeholder="e.g. S2047" required /></label>
               <label>Ownership type<select name="ownership_type" value={form.ownership_type} onChange={updateField} required disabled={loading || !ownershipOptions.length}><option value="">Select ownership type</option>{ownershipOptions.map((option) => <option key={option.id} value={option.name}>{option.name}</option>)}</select></label>
               <label>Country<select name="country" value={form.country} onChange={updateField} required disabled={loading}><option value="">Select country</option>{countries.map((country) => <option key={country.id} value={country.id}>{country.name}</option>)}</select></label>
-              <label>Zone<select name="zone" value={form.zone} onChange={updateField} required disabled={loading || !form.country}><option value="">Select zone</option>{countryZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label>
-              <label>Region<select name="region" value={form.region} onChange={updateField} required disabled={!form.zone}><option value="">Select region</option>{zoneRegions.map((region) => <option key={region.id} value={region.id}>{region.name}</option>)}</select></label>
-              <label>District<select name="district" value={form.district} onChange={updateField} required disabled={!form.region}><option value="">Select district</option>{regionDistricts.map((district) => <option key={district.id} value={district.id}>{district.name}</option>)}</select></label>
-              <label>Ward<select name="ward" value={form.ward} onChange={updateField} required disabled={!form.district}><option value="">Select ward</option>{districtWards.map((ward) => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
-              <label>School phone<input name="phone" type="tel" value={form.phone} onChange={updateField} placeholder="e.g. +255 712 345 678" required /></label>
+              {isTanzaniaCountry(form.country, countries) ? (
+                <>
+                  <label>Zone<select name="zone" value={form.zone} onChange={updateField} required disabled={loading || !form.country}><option value="">Select zone</option>{countryZones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}</select></label>
+                  <label>Region<select name="region" value={form.region} onChange={updateField} required disabled={!form.zone}><option value="">Select region</option>{zoneRegions.map((region) => <option key={region.id} value={region.id}>{region.name}</option>)}</select></label>
+                  <label>District<select name="district" value={form.district} onChange={updateField} required disabled={!form.region}><option value="">Select district</option>{regionDistricts.map((district) => <option key={district.id} value={district.id}>{district.name}</option>)}</select></label>
+                  <label>Ward<select name="ward" value={form.ward} onChange={updateField} required disabled={!form.district}><option value="">Select ward</option>{districtWards.map((ward) => <option key={ward.id} value={ward.id}>{ward.name}</option>)}</select></label>
+                </>
+              ) : form.country ? (
+                <>
+                  <label>City / Council<input name="city_council" value={form.city_council} onChange={updateField} required placeholder="Enter city or council" /></label>
+                  <label>Street / Village<input name="street_village" value={form.street_village} onChange={updateField} required placeholder="Enter street or village" /></label>
+                </>
+              ) : null}
+              <label>School phone<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>{isTanzaniaCountry(form.country, countries) && <span>+255</span>}<input name="phone" type="tel" inputMode="numeric" value={form.phone} onChange={(event) => updateField({ target: { name: "phone", value: event.target.value.replace(/\\D/g, "").slice(0, 9) } })} placeholder={isTanzaniaCountry(form.country, countries) ? "712345678" : "Enter phone digits"} required /></div></label>
               <label>Physical address<input name="physical_address" type="text" value={form.physical_address} onChange={updateField} placeholder="P.O.Box 278 Sengerema" /></label>
               <label>School email<input name="email" type="email" value={form.email} onChange={updateField} placeholder="e.g. school@example.com" required /></label>
             </div>

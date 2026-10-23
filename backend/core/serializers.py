@@ -61,13 +61,25 @@ class SchoolSerializer(serializers.ModelSerializer):
             'region',
             'district',
             'ward',
+            'city_council',
+            'street_village',
             'phone',
             'physical_address',
             'email',
             'is_approved',
+            'is_active',
             'created_at',
         ]
-        read_only_fields = ['is_approved']
+        read_only_fields = ['is_approved', 'is_active', 'created_at']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+
+        if getattr(user, 'role', None) == 'district_manager':
+            for field_name in ('country', 'zone', 'region', 'district'):
+                self.fields[field_name].read_only = True
 
     def create(self, validated_data):
         request = self.context.get('request')
@@ -75,31 +87,195 @@ class SchoolSerializer(serializers.ModelSerializer):
         validated_data['is_approved'] = bool(user and getattr(user, 'role', None) == 'talent_admin')
         return super().create(validated_data)
 
+    def validate_name(self, value):
+        value = value.strip()
+        if not value or not value.istitle():
+            raise serializers.ValidationError(
+                "Use title case for every word, e.g. Azania Secondary School."
+            )
+        return value
+
+    def validate_registry_number(self, value):
+        value = value.strip()
+        if not re.fullmatch(r"[A-Za-z]\.?[0-9]{3,4}", value):
+            raise serializers.ValidationError(
+                "Use a valid registry number, e.g. S2047, S703, p0655 or s.0677."
+            )
+        return value
+
+    def validate_phone(self, value):
+        if not value:
+            return value
+
+        country_id = self.initial_data.get(
+            'country',
+            getattr(self.instance, 'country_id', None)
+        )
+        country = Country.objects.filter(pk=country_id).first()
+        country_code = (
+            (country.code or '').strip().upper()
+            if country else ''
+        )
+        is_tanzania = (
+            country_code in {'TZ', 'TZA'}
+            or (
+                country is not None
+                and country.name.strip().lower() == 'tanzania'
+            )
+        )
+
+        if is_tanzania:
+            if not re.fullmatch(r"\+255[0-9]{9}", value):
+                raise serializers.ValidationError(
+                    "Enter +255 followed by exactly 9 digits, without spaces."
+                )
+        elif not re.fullmatch(r"[0-9]+", value):
+            raise serializers.ValidationError(
+                "For countries outside Tanzania, enter digits only."
+            )
+
+        duplicates = School.objects.filter(phone=value)
+        if self.instance:
+            duplicates = duplicates.exclude(pk=self.instance.pk)
+        if duplicates.exists():
+            raise serializers.ValidationError(
+                "This phone number is already registered to another school."
+            )
+        return value
+
     def validate(self, attrs):
-        country = attrs.get('country')
+        request = self.context.get('request')
+        user = getattr(request, 'user', None) if request else None
+
+        country = attrs.get(
+            'country',
+            getattr(self.instance, 'country', None)
+        )
         zone = attrs.get('zone')
         region = attrs.get('region')
         district = attrs.get('district')
         ward = attrs.get('ward')
         ownership_type = attrs.get('ownership_type')
 
+        # Restrict District Managers to their assigned district.
+        if getattr(user, 'role', None) == 'district_manager':
+            assigned_district = getattr(user, 'district', None)
+
+            if assigned_district is None:
+                raise serializers.ValidationError({
+                    'district': 'Your account is not assigned to a district. Contact the Talent Admin.'
+                })
+
+            if district and district.pk != assigned_district.pk:
+                raise serializers.ValidationError({
+                    'district': 'You can register schools only in your assigned district.'
+                })
+
+            district = assigned_district
+            attrs['district'] = district
+
+            region = district.region
+            zone = region.zone
+            country = zone.country
+
+            for field_name, submitted, expected in (
+                ('country', attrs.get('country'), country),
+                ('zone', attrs.get('zone'), zone),
+                ('region', attrs.get('region'), region),
+            ):
+                if submitted and submitted.pk != expected.pk:
+                    raise serializers.ValidationError({
+                        field_name: 'This location must match your assigned district.'
+                    })
+                attrs[field_name] = expected
+
+        # Validate the location fields according to the selected country.
+        # District Manager restrictions above remain in force.
+        country_code = (
+            (getattr(country, 'code', '') or '').strip().upper()
+        )
+        is_tanzania = (
+            country_code in {'TZ', 'TZA'}
+            or (
+                country is not None
+                and getattr(country, 'name', '').strip().lower() == 'tanzania'
+            )
+        )
+
+        if is_tanzania:
+            required_locations = {
+                'zone': zone if zone is not None else getattr(self.instance, 'zone', None),
+                'region': region if region is not None else getattr(self.instance, 'region', None),
+                'district': district if district is not None else getattr(self.instance, 'district', None),
+                'ward': ward if ward is not None else getattr(self.instance, 'ward', None),
+            }
+            missing = [
+                field for field, value in required_locations.items()
+                if value is None
+            ]
+            if missing:
+                raise serializers.ValidationError({
+                    field: 'This field is required for schools in Tanzania.'
+                    for field in missing
+                })
+        else:
+            city_council = (
+                attrs.get('city_council')
+                if 'city_council' in attrs
+                else getattr(self.instance, 'city_council', '')
+            )
+            street_village = (
+                attrs.get('street_village')
+                if 'street_village' in attrs
+                else getattr(self.instance, 'street_village', '')
+            )
+
+            if not (city_council or '').strip():
+                raise serializers.ValidationError({
+                    'city_council': 'City / Council is required outside Tanzania.'
+                })
+            if not (street_village or '').strip():
+                raise serializers.ValidationError({
+                    'street_village': 'Street / Village is required outside Tanzania.'
+                })
+
+            attrs['zone'] = None
+            attrs['region'] = None
+            attrs['district'] = None
+            attrs['ward'] = None
+
         if ownership_type:
             active_names = set(
-                SchoolOwnershipType.objects.filter(is_active=True).values_list('name', flat=True)
+                SchoolOwnershipType.objects.filter(
+                    is_active=True
+                ).values_list('name', flat=True)
             )
             if ownership_type not in active_names:
-                raise serializers.ValidationError({'ownership_type': 'Choose a valid school ownership type.'})
+                raise serializers.ValidationError({
+                    'ownership_type': 'Choose a valid school ownership type.'
+                })
 
         if zone and country and zone.country_id != country.pk:
-            raise serializers.ValidationError({'zone': 'Choose a zone belonging to the selected country.'})
+            raise serializers.ValidationError({
+                'zone': 'Choose a zone belonging to the selected country.'
+            })
         if region and zone and region.zone_id != zone.pk:
-            raise serializers.ValidationError({'region': 'Choose a region belonging to the selected zone.'})
+            raise serializers.ValidationError({
+                'region': 'Choose a region belonging to the selected zone.'
+            })
         if district and region and district.region_id != region.pk:
-            raise serializers.ValidationError({'district': 'Choose a district belonging to the selected region.'})
+            raise serializers.ValidationError({
+                'district': 'Choose a district belonging to the selected region.'
+            })
         if ward and district and ward.district_id != district.pk:
-            raise serializers.ValidationError({'ward': 'Choose a ward belonging to the selected district.'})
+            raise serializers.ValidationError({
+                'ward': 'Choose a ward belonging to the selected district.'
+            })
         if ward and region and ward.district.region_id != region.pk:
-            raise serializers.ValidationError({'ward': 'Choose a ward belonging to the selected region.'})
+            raise serializers.ValidationError({
+                'ward': 'Choose a ward belonging to the selected region.'
+            })
+
         return attrs
 
 
@@ -113,7 +289,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'password', 'first_name', 'last_name', 'email', 'phone',
-            'role', 'school', 'school_name', 'student', 'student_id', 'country', 'zone', 'region', 'district', 'district_name', 'ward',
+            'role', 'school', 'school_name', 'student', 'student_id', 'country', 'zone', 'region', 'district', 'district_name', 'ward', 'city_council', 'street_village',
         ]
 
     def validate_phone(self, value):
@@ -122,11 +298,138 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
+        country = attrs.get("country", getattr(self.instance, "country", None))
+        if country is not None:
+            country_name = str(getattr(country, "name", "") or "").strip().lower()
+            country_code = str(getattr(country, "code", "") or "").strip().lower()
+            is_tanzania = (
+                country_name == "tanzania"
+                or country_code in {"tz", "tza"}
+            )
+
+            if is_tanzania:
+                attrs["city_council"] = ""
+                attrs["street_village"] = ""
+            else:
+                city_council = attrs.get(
+                    "city_council",
+                    getattr(self.instance, "city_council", ""),
+                )
+                street_village = attrs.get(
+                    "street_village",
+                    getattr(self.instance, "street_village", ""),
+                )
+
+                if not str(city_council or "").strip():
+                    raise serializers.ValidationError({
+                        "city_council": "City/Council is required outside Tanzania."
+                    })
+                if not str(street_village or "").strip():
+                    raise serializers.ValidationError({
+                        "street_village": "Street/Village is required outside Tanzania."
+                    })
+
+                attrs["zone"] = None
+                attrs["region"] = None
+                attrs["district"] = None
+                attrs["ward"] = None
+
         role = attrs.get('role', getattr(self.instance, 'role', None))
-        if role == 'student' and not attrs.get('school', getattr(self.instance, 'school', None)):
-            raise serializers.ValidationError({'school': 'A student account must be assigned to a school.'})
-        if role in {'sport_teacher', 'head_teacher'} and not attrs.get('school', getattr(self.instance, 'school', None)):
-            raise serializers.ValidationError({'school': 'A sport teacher or head teacher account must be assigned to a school.'})
+        school = attrs.get('school', getattr(self.instance, 'school', None))
+
+        request = self.context.get('request')
+        requester = getattr(request, 'user', None)
+
+        is_super_admin = bool(
+            requester
+            and requester.is_authenticated
+            and requester.is_superuser
+        )
+        is_admin = bool(
+            requester
+            and requester.is_authenticated
+            and requester.role == 'admin'
+            and not requester.is_superuser
+        )
+
+        # Only Super Admin and Admin may create new Admin accounts.
+        if (
+            self.instance is None
+            and role == 'admin'
+            and not (is_super_admin or is_admin)
+        ):
+            raise serializers.ValidationError({
+                'role': 'Only Super Admin or Admin can create Admin accounts.'
+            })
+
+        # A regular Admin may not promote an existing account to Admin,
+        # change another Admin's role, or change their own role.
+        if is_admin and self.instance is not None and 'role' in attrs:
+            requested_role = attrs['role']
+
+            if requested_role != self.instance.role:
+                raise serializers.ValidationError({
+                    'role': 'Admin cannot change their own role or change another account role.'
+                })
+
+        # Allow only one manager of each role per geographic area.
+        manager_scope = {
+            'region_manager': ('region', 'region_id'),
+            'zone_manager': ('zone', 'zone_id'),
+            'district_manager': ('district', 'district_id'),
+            'ward_manager': ('ward', 'ward_id'),
+        }
+
+        if role in manager_scope:
+            field, lookup = manager_scope[role]
+            area = attrs.get(field, getattr(self.instance, field, None))
+
+            if area is not None:
+                existing = User.objects.filter(
+                    role=role,
+                    **{lookup: area.pk},
+                )
+
+                if self.instance is not None:
+                    existing = existing.exclude(pk=self.instance.pk)
+
+                if existing.exists():
+                    raise serializers.ValidationError({
+                        field: f'This {dict(region="region", zone="zone", district="district", ward="ward").get(field, "area")} already has a {dict(region="Region", zone="Zone", district="District", ward="Ward").get(field, "Area")} Manager. You cannot register another manager for this {dict(region="region", zone="zone", district="district", ward="ward").get(field, "area")}.'
+                    })
+
+        if role == 'student' and not school:
+            raise serializers.ValidationError({
+                'school': 'A student account must be assigned to a school.'
+            })
+
+        if role in {'sport_teacher', 'head_teacher'} and not school:
+            raise serializers.ValidationError({
+                'school': 'A sport teacher or head teacher account must be assigned to a school.'
+            })
+
+        if role == 'sport_teacher' and school:
+            assigned_teachers = User.objects.filter(
+                role='sport_teacher',
+                school=school,
+            )
+
+            if self.instance is not None:
+                assigned_teachers = assigned_teachers.exclude(
+                    pk=self.instance.pk
+                )
+
+            if assigned_teachers.exists():
+                raise serializers.ValidationError({
+                    'school': 'This school already has a sport teacher assigned. Choose another school.'
+                })
+
+            ward = attrs.get('ward', getattr(self.instance, 'ward', None))
+            if ward and school.ward_id != ward.pk:
+                raise serializers.ValidationError({
+                    'school': 'Choose a school belonging to the selected ward.'
+                })
+
         return attrs
 
     def _ensure_student_link(self, user, validated_data):
@@ -217,15 +520,12 @@ class TalentCategorySerializer(serializers.ModelSerializer):
 
 
 class TalentSerializer(serializers.ModelSerializer):
-    student_count = serializers.SerializerMethodField()
+    student_count = serializers.IntegerField(read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
 
     class Meta:
         model = Talent
         fields = ['id', 'name', 'category', 'category_name', 'description', 'student_count', 'created_at']
-
-    def get_student_count(self, obj):
-        return obj.students.count()
 
 
 class StudentTalentSerializer(serializers.ModelSerializer):
@@ -272,6 +572,7 @@ class AnnouncementSerializer(serializers.ModelSerializer):
             'content',
             'scope',
             'scope_display',
+            'audience',
             'country',
             'zone',
             'region',
@@ -296,6 +597,19 @@ class AnnouncementSerializer(serializers.ModelSerializer):
         target = attrs[target_field] if target_field in attrs else getattr(self.instance, f'{target_field}_id', None)
         if target_field and not target:
             raise serializers.ValidationError({target_field: f'{target_field.title()} is required for {scope} announcements.'})
+
+        published_at = attrs.get(
+            'published_at',
+            getattr(self.instance, 'published_at', None),
+        )
+        expires_at = attrs.get(
+            'expires_at',
+            getattr(self.instance, 'expires_at', None),
+        )
+        if published_at and expires_at and expires_at <= published_at:
+            raise serializers.ValidationError({
+                'expires_at': 'Expire date and time must be later than the starting date and time.'
+            })
         return attrs
 
 
@@ -336,7 +650,7 @@ class ClubTeacherSerializer(serializers.ModelSerializer):
 
 
 class StudentClubMembershipSerializer(serializers.ModelSerializer):
-    club_name = serializers.CharField(source='club.name', read_only=True)
+    club_name = serializers.CharField(source='club.country_club.name', read_only=True)
 
     class Meta:
         model = StudentClubMembership

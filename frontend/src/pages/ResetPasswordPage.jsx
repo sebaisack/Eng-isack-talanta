@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import * as apiService from '../services/apiService';
@@ -11,6 +12,10 @@ export default function ResetPasswordPage() {
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -42,16 +47,27 @@ export default function ResetPasswordPage() {
     }
 
     setLoading(true);
+
     try {
       await apiService.resetPassword(token, newPassword);
+
       setSuccess(true);
+
       setTimeout(() => {
         navigate('/login');
       }, 2000);
     } catch (err) {
-      const errorMsg = err?.response?.data?.detail || err?.message || 'Failed to reset password';
+      const errorMsg =
+        err?.response?.data?.detail ||
+        err?.message ||
+        'Failed to reset password';
+
       setError(errorMsg);
-      if (errorMsg.includes('invalid') || errorMsg.includes('expired')) {
+
+      if (
+        errorMsg.toLowerCase().includes('invalid') ||
+        errorMsg.toLowerCase().includes('expired')
+      ) {
         setInvalidToken(true);
       }
     } finally {
@@ -64,28 +80,86 @@ export default function ResetPasswordPage() {
       <div className="login-card">
         <div className="login-header">
           <p className="welcome-label">Talanta Management System</p>
-          <img className="brand-logo" src={logo} alt="Talanta logo" />
+
+          <img
+            className="brand-logo"
+            src={logo}
+            alt="Talanta logo"
+          />
         </div>
 
         {invalidToken ? (
-          <div style={{ textAlign: 'center', color: '#991b1b', padding: '20px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>✕</div>
-            <p style={{ fontSize: '0.95rem', margin: '0' }}>
+          <div
+            style={{
+              textAlign: 'center',
+              color: '#991b1b',
+              padding: '20px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '2rem',
+                marginBottom: '10px',
+              }}
+            >
+              ✕
+            </div>
+
+            <p
+              style={{
+                fontSize: '0.95rem',
+                margin: '0',
+              }}
+            >
               This password reset link is invalid or has expired.
             </p>
+
             <div style={{ marginTop: '20px' }}>
-              <Link to="/forgot-password" className="primary-btn" style={{ display: 'inline-block', textDecoration: 'none' }}>
+              <Link
+                to="/forgot-password"
+                className="primary-btn"
+                style={{
+                  display: 'inline-block',
+                  textDecoration: 'none',
+                }}
+              >
                 Request New Reset Link
               </Link>
             </div>
           </div>
         ) : success ? (
-          <div style={{ textAlign: 'center', color: '#065f46', padding: '20px' }}>
-            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>✓</div>
-            <p style={{ fontSize: '0.95rem', margin: '0' }}>
+          <div
+            style={{
+              textAlign: 'center',
+              color: '#065f46',
+              padding: '20px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '2rem',
+                marginBottom: '10px',
+              }}
+            >
+              ✓
+            </div>
+
+            <p
+              style={{
+                fontSize: '0.95rem',
+                margin: '0',
+              }}
+            >
               Password reset successfully!
             </p>
-            <p style={{ fontSize: '0.85rem', color: '#888', marginTop: '10px' }}>
+
+            <p
+              style={{
+                fontSize: '0.85rem',
+                color: '#888',
+                marginTop: '10px',
+              }}
+            >
               Redirecting to login in 2 seconds...
             </p>
           </div>
@@ -98,41 +172,156 @@ export default function ResetPasswordPage() {
             )}
 
             <form onSubmit={handleSubmit} className="auth-form">
-              <h3 style={{ textAlign: 'center', color: '#0f172a', marginBottom: '20px', marginTop: '0' }}>
+
+              <h3
+                style={{
+                  textAlign: 'center',
+                  color: '#0f172a',
+                  marginBottom: '20px',
+                  marginTop: '0',
+                }}
+              >
                 Create New Password
               </h3>
 
+              {/* NEW PASSWORD */}
               <div className="field-group">
-                <label htmlFor="new-password">New Password</label>
-                <input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 8 characters"
-                  minLength="8"
-                />
+                <label htmlFor="new-password">
+                  New Password
+                </label>
+
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                  }}
+                >
+                  <input
+                    id="new-password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="At least 8 characters"
+                    minLength="8"
+                    style={{
+                      width: '100%',
+                      paddingRight: '45px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowNewPassword(!showNewPassword)
+                    }
+                    aria-label={
+                      showNewPassword
+                        ? 'Hide password'
+                        : 'Show password'
+                    }
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontSize: '1.1rem',
+                      padding: '4px',
+                    }}
+                  >
+                    {showNewPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
               </div>
 
+              {/* CONFIRM PASSWORD */}
               <div className="field-group">
-                <label htmlFor="confirm-password">Confirm Password</label>
-                <input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your password"
-                  minLength="8"
-                />
+                <label htmlFor="confirm-password">
+                  Confirm Password
+                </label>
+
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                  }}
+                >
+                  <input
+                    id="confirm-password"
+                    type={
+                      showConfirmPassword ? 'text' : 'password'
+                    }
+                    value={confirmPassword}
+                    onChange={(e) =>
+                      setConfirmPassword(e.target.value)
+                    }
+                    placeholder="Re-enter your password"
+                    minLength="8"
+                    style={{
+                      width: '100%',
+                      paddingRight: '45px',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowConfirmPassword(
+                        !showConfirmPassword
+                      )
+                    }
+                    aria-label={
+                      showConfirmPassword
+                        ? 'Hide password'
+                        : 'Show password'
+                    }
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontSize: '1.1rem',
+                      padding: '4px',
+                    }}
+                  >
+                    {showConfirmPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
               </div>
 
-              <button type="submit" className="primary-btn" disabled={loading} style={{ width: '100%' }}>
-                {loading ? 'Resetting password...' : 'Reset Password'}
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={loading}
+                style={{ width: '100%' }}
+              >
+                {loading
+                  ? 'Resetting password...'
+                  : 'Reset Password'}
               </button>
             </form>
 
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
-              <Link to="/login" style={{ fontSize: '0.9rem', color: '#0E1DB6', textDecoration: 'underline' }}>
+            <div
+              style={{
+                marginTop: '20px',
+                textAlign: 'center',
+              }}
+            >
+              <Link
+                to="/login"
+                style={{
+                  fontSize: '0.9rem',
+                  color: '#0E1DB6',
+                  textDecoration: 'underline',
+                }}
+              >
                 Back to login
               </Link>
             </div>
@@ -142,3 +331,4 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+

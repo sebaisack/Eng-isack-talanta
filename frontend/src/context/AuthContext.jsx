@@ -5,7 +5,7 @@ const AuthContext = createContext();
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL ||
-  `${window.location.protocol}//${window.location.hostname}:8000`;
+  window.location.origin;
 
 const LOGIN_REQUEST_TIMEOUT = 10000;
 

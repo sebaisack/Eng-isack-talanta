@@ -1,102 +1,157 @@
-# Talent in School Management System
+# Talantaz
 
-This system helps schools and education administrators manage student talent records, competitions, results, and promotion flows across school, district, zone, and higher levels.
+Talantaz is a talent and sports management system built with Django REST Framework, React, Vite, and MySQL. Docker Compose is used to run the application services together.
 
-## What the system does
+## Technology Stack
 
-- Register and manage student and school information
-- Track talent records and related academic or sports performance
-- Create and manage school, district, and regional competitions
-- Record results and evaluate performance by talent
-- Promote results from one level to another in a structured flow
-- Manage announcements for different user groups
-- Support different roles such as administrators, managers, teachers, and students
+- Frontend: React, Vite, Nginx
+- Backend: Python, Django, Django REST Framework
+- Database: MySQL 8.4
+- Containerization: Docker and Docker Compose
 
-## Tech stack
+## Prerequisites
 
-- Backend: Django + Django REST Framework
-- Frontend: React + Vite
-- Database: SQLite for local development/testing, with project support for PostgreSQL/MySQL-style setups depending on deployment
+Install the following software before starting:
 
-## Clone the project
+- Git
+- Docker Desktop
+- Docker Compose (included with current Docker Desktop versions)
 
-```bash
-git clone https://github.com/your-username/talents.git
-cd talents
-```
+Make sure Docker Desktop is running.
 
-## Database configuration before migration
-
-Before running migrations, configure the database connection in the Django settings file.
-
-Open:
-
-- backend/config/settings.py
-
-Update the DATABASES section so it uses your MySQL connection settings. Example:
-
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'talents_db',
-        'USER': 'root',
-        'PASSWORD': 'your_mysql_password',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
-    }
-}
-```
-
-Make sure:
-
-- the MySQL server is running
-- the database name exists
-- the user has permission to create tables and run migrations
-- the password and host values match your local MySQL setup
-
-If you are using a different database engine, change the ENGINE value accordingly, but make sure the database is ready before migration.
-
-## Run the backend
+## 1. Clone the Repository
 
 ```bash
-cd backend
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-# Linux/macOS
-# source venv/bin/activate
-
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
+git clone https://github.com/sebaisack/Eng-isack-talanta.git
+cd Eng-isack-talanta
 ```
 
-The backend will run at:
+If the repository is private, you must have permission to access it.
 
-- http://127.0.0.1:8000
+## 2. Configure Environment Variables
 
-## Run the frontend
+Create your local environment file from the example:
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cp .env.example .env
 ```
 
-The frontend will run at:
+Open `.env` and replace the example values with strong, unique secrets.
 
-- http://localhost:5173
+Required settings include:
 
-## Notes
+- `DJANGO_SECRET_KEY`: a long, random Django secret key.
+- `MYSQL_ROOT_PASSWORD`: a strong MySQL root password.
+- `DJANGO_DEBUG`: keep `False` for production.
+- `ALLOWED_HOSTS`: the hostnames used to access the application.
+- `CORS_ALLOWED_ORIGINS`: the permitted frontend origins.
 
-This project is meant to be run as two separate parts:
+The same MySQL password must be used by the database and backend configuration. Follow the environment variable structure in `.env.example`.
 
-1. Django backend for APIs and business logic
-2. React frontend for the user interface
+Never commit `.env` or share its secrets publicly.
 
-To work on the project locally, start both servers in separate terminals and access the frontend in the browser.
+## 3. Start the Application
+
+Build the images and start all services:
+
+```bash
+docker compose up -d --build
+```
+
+The first build can take several minutes, depending on your internet connection and computer.
+
+Check service status:
+
+```bash
+docker compose ps
+```
+
+Wait until the database is healthy and the backend and frontend are running.
+
+The backend runs database migrations automatically when its container starts.
+
+## 4. Open Talantaz
+
+Open the frontend in your browser:
+
+http://localhost:5173
+
+The backend API is routed through the frontend's Nginx service under `/api/`.
+
+## 5. Create an Administrator Account
+
+A new installation does not automatically include an administrator account.
+
+Create a Django superuser:
+
+```bash
+docker compose exec backend python manage.py createsuperuser
+```
+
+Follow the prompts to set the username, email address if requested, and password.
+
+The Django administration page is available at:
+
+http://localhost:5173/admin/
+
+Use the application's appropriate login page for normal Talantaz access.
+
+## Useful Docker Commands
+
+View running services:
+
+```bash
+docker compose ps
+```
+
+View logs:
+
+```bash
+docker compose logs --tail=100
+```
+
+View backend logs:
+
+```bash
+docker compose logs --tail=100 backend
+```
+
+Restart services:
+
+```bash
+docker compose restart
+```
+
+Stop services without deleting the database volume:
+
+```bash
+docker compose down
+```
+
+Start them again:
+
+```bash
+docker compose up -d
+```
+
+**Important:** Do not use `docker compose down -v` unless you intentionally want to remove the database volume. Removing the volume can permanently delete the database stored in it.
+
+## Database and Backups
+
+The MySQL database is stored in a Docker-managed volume. A fresh installation starts with an empty database and applies migrations automatically.
+
+Back up the database regularly and store backups securely outside Git.
+
+A backup from another installation is not included in this repository. Restore one only when you are authorized to use it and have confirmed that it is compatible with your application version.
+
+## Security Notes
+
+- Never commit `.env`, passwords, API tokens, or production secrets.
+- Do not use example passwords in a real deployment.
+- Keep `DJANGO_DEBUG=False` in production.
+- Configure `ALLOWED_HOSTS` and `CORS_ALLOWED_ORIGINS` for the actual deployment domain.
+- Use HTTPS and secure production infrastructure when exposing the application publicly.
+
+## License
+
+Add the appropriate license before redistributing this project.

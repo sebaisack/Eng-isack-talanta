@@ -148,7 +148,18 @@ A backup from another installation is not included in this repository. Restore o
 
 Production runs at https://talanta.conturetz.com on the server `82.112.231.18`.
 
-Every push and pull request runs the GitHub Actions workflow in `.github/workflows/ci-cd.yml`: backend tests against MySQL, plus frontend lint and build. A push to `main` that passes these checks also builds the backend and frontend images, pushes them to GitHub Container Registry (`ghcr.io/sebaisack/eng-isack-talanta-backend` and `-frontend`, tagged with the commit SHA), and deploys them.
+Every push and pull request runs the GitHub Actions workflow in `.github/workflows/ci-cd.yml`: backend tests against MySQL, plus frontend lint and build. Pushing to `main` only runs these checks; it does not deploy.
+
+Deployments come from the `production` branch. When the changes on `main` are ready to release, merge `main` into `production`, either with a pull request from `main` to `production` on GitHub or locally:
+
+```bash
+git checkout production
+git pull
+git merge main
+git push origin production
+```
+
+A push to `production` that passes the checks builds the backend and frontend images, pushes them to GitHub Container Registry (`ghcr.io/sebaisack/eng-isack-talanta-backend` and `-frontend`, tagged with the commit SHA), and deploys them. To roll back, use the `rollback` command below or revert the change on `production`.
 
 How production is set up on the server:
 

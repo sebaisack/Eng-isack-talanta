@@ -144,6 +144,33 @@ Back up the database regularly and store backups securely outside Git.
 
 A backup from another installation is not included in this repository. Restore one only when you are authorized to use it and have confirmed that it is compatible with your application version.
 
+## Production Deployment (CI/CD)
+
+Production runs at https://talanta.conturetz.com on the server `82.112.231.18`.
+
+Every push and pull request runs the GitHub Actions workflow in `.github/workflows/ci-cd.yml`: backend tests against MySQL, plus frontend lint and build. A push to `main` that passes these checks also builds the backend and frontend images, pushes them to GitHub Container Registry (`ghcr.io/sebaisack/eng-isack-talanta-backend` and `-frontend`, tagged with the commit SHA), and deploys them.
+
+How production is set up on the server:
+
+- The app lives in `/var/www/talanta-docker`. Docker Compose runs only the backend and frontend containers; the compose file comes from `deploy/compose.prod.yaml` in each release.
+- The database is the MySQL server installed on the host (database `talents`, user `kabandwa`), not a container.
+- The host Nginx terminates HTTPS and proxies to the frontend container on `127.0.0.1:8095`. The site config is in `deploy/nginx/talanta.conturetz.com.conf`.
+- Secrets are stored only in `/var/www/talanta-docker/.env` on the server. Use `deploy/production.env.example` as the template.
+- GitHub Actions connects as the `tldeploy` user, whose SSH key may only run `deploy/deploy.sh` (installed as `/var/www/talanta-docker/bin/deploy.sh`). Before any migrations run, the script backs up the database to `/var/www/talanta-docker/backups`. It then health-checks the new release and rolls back automatically if the release fails.
+
+Required repository secrets: `DEPLOY_SSH_KEY`, `DEPLOY_KNOWN_HOSTS`, `DEPLOY_HOST`, `DEPLOY_USER`.
+
+Operator commands on the server (as root):
+
+```bash
+/var/www/talanta-docker/bin/deploy.sh status
+/var/www/talanta-docker/bin/deploy.sh rollback
+/var/www/talanta-docker/bin/deploy.sh compose logs --tail=100 backend
+/var/www/talanta-docker/bin/deploy.sh compose exec backend python manage.py createsuperuser
+```
+
+After changing `deploy/deploy.sh`, copy it to `/var/www/talanta-docker/bin/deploy.sh` on the server, because the deploy key runs that installed copy.
+
 ## Security Notes
 
 - Never commit `.env`, passwords, API tokens, or production secrets.

@@ -15,6 +15,7 @@ __pycache__/
 venv/
 vee/
 backend/venv/
+backend/staticfiles/
 
 # Django: keep all migrations tracked
 # Do not ignore migrations directories.

@@ -1,0 +1,74 @@
+# Production stack for talanta.conturetz.com.
+#
+# The host Nginx terminates HTTPS and proxies to the frontend container on APP_PORT.
+# The database is the MySQL server installed on the host; it is not run in Docker.
+#
+# Installed by deploy/deploy.sh as /var/www/talanta-docker/docker-compose.yml, next to:
+#   .env              Django settings and database credentials (see deploy/production.env.example)
+#   state/compose.env optional overrides for the variables below
+#
+#   BACKEND_IMAGE / FRONTEND_IMAGE  images of the release, set by deploy.sh
+#   APP_PORT                        loopback port the host Nginx proxies to (default 8095)
+#   DOCKER_DB_HOST                  host MySQL address as seen from the containers (default: network gateway)
+
+name: talanta
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?Set BACKEND_IMAGE}
+    pull_policy: missing
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      DB_HOST: ${DOCKER_DB_HOST:-172.30.13.1}
+      DJANGO_DEBUG: "False"
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+    volumes:
+      - talanta_media:/app/talent_submissions
+    networks:
+      - talanta
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/admin/login/', timeout=5)"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging: *logging
+
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set FRONTEND_IMAGE}
+    pull_policy: missing
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-8095}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - talanta
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+
+volumes:
+  talanta_media:
+    name: talanta_media
+
+networks:
+  talanta:
+    name: talanta
+    ipam:
+      config:
+        - subnet: 172.30.13.0/24
+          gateway: 172.30.13.1

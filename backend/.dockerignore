@@ -1,0 +1,12 @@
+.env
+.env.*
+venv
+vee
+**/__pycache__
+**/*.py[cod]
+staticfiles
+backups
+**/*.sql
+**/*.sqlite3
+**/*.backup*
+**/*.bak*
